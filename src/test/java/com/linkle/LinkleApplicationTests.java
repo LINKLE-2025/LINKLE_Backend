@@ -1,4 +1,4 @@
-package com.shinhan.linkle;
+package com.linkle;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

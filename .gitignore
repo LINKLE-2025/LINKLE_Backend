@@ -1,0 +1,82 @@
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### OS 관련 임시 파일 ###
+.DS_Store
+Thumbs.db
+
+### 로그 / 임시 파일 ###
+*.log
+logs/
+*.tmp
+*.swp
+
+### 환경 변수 / 보안 파일 ###
+application-*.yml
+application-*.yaml
+application-*.properties
+application.properties
+.env
+.env.*     # 로컬/스테이징 환경별 설정
+
+### Gradle 캐시 ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+### QueryDSL ###
+src/main/generated/
+generated/
+
+### Test 결과 ###
+test-output/
+
+### 데이터 분석/모델 (LFS 적용 대상 아님) ###
+*.ipynb_checkpoints/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pickle
+*.pkl
+
+### 기타 IDE / 툴 ###
+*.sublime-project
+*.sublime-workspace
+*.idea_modules
+atlassian-ide-plugin.xml

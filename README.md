@@ -50,7 +50,7 @@ Spring Boot와 React를 기반으로, 백엔드-프론트엔드-데이터베이�
 
 ```bash
 # 저장소 클론
-git clone https://github.com/LSHmain/TestIntelliJ.git
+git clone https://github.com/LINKLE-2025/LINKLE_Backend.git
 cd TestIntelliJ
 ```
 
@@ -65,9 +65,6 @@ cd frontend
 npm install
 npm start
 ```
-
-
-
 
 ## 기여가이드
 | 타입  | 설명 |

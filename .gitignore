@@ -1,0 +1,75 @@
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+# === 로그 파일 ===
+*.log
+logs/
+spring.log
+
+# === 운영 중 생성되는 임시 파일 ===
+*.tmp
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+
+# === 환경변수 / 시크릿 ===
+.env
+.env.*
+application-*.yml
+application-*.properties
+
+# === 빌드 생성 JAR/WAR ===
+*.jar
+*.war
+*.ear
+
+# === 테스트 리포트 ===
+/test-output/
+/build/reports/
+/build/test-results/
+
+# === Docker ===
+*.pid
+docker-compose.override.yml
+
+# === 기타 커먼 캐시 ===
+/target/
+.cache/
+.idea_modules/
+.gradle/

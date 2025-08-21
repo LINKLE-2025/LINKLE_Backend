@@ -1,7 +1,6 @@
 # LINKLE_Backend
 Spring Boot 기반 백엔드 서버
-<<<<<<< HEAD
-=======
+
 
 ## 동네 친구 SNS (Local Friends SNS)
 
@@ -87,4 +86,4 @@ User → React → Spring Boot REST API → MariaDB
 ---
 ## 🪪 라이선스
 이 프로젝트는 MIT 라이선스를 따릅니다. [LICENSE](./LICENSE) 파일을 확인해주세요.
->>>>>>> c383a9a (초기 프로젝트 설정: Spring Boot init)
+

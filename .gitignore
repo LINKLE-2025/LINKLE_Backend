@@ -73,3 +73,6 @@ docker-compose.override.yml
 .cache/
 .idea_modules/
 .gradle/
+
+
+application.properties

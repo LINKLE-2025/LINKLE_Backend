@@ -1,10 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <title>회원가입</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+        }
+        form {
+            max-width: 400px;
+            margin: auto;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            width: 100%;
+        }
+        .result {
+            margin-top: 30px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-$END$
+<h2>회원가입</h2>
+<form id="registerForm">
+    <label for="username">이름</label>
+    <input type="text" id="username" name="username" required />
+
+    <label for="email">이메일</label>
+    <input type="email" id="email" name="email" required />
+
+    <label for="password">비밀번호</label>
+    <input type="password" id="password" name="password" required />
+
+    <button type="submit">가입하기</button>
+</form>
+
+<div class="result" id="result"></div>
+
+<script>
+    document.getElementById("registerForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+
+        const username = document.getElementById("username").value;
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        const response = await fetch("/api/users/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ username, email, password })
+        });
+
+        const resultDiv = document.getElementById("result");
+
+        if (response.ok) {
+            const data = await response.json();
+            resultDiv.innerHTML = `<strong>가입 성공!</strong><br>ID: ${data.id}<br>이름: ${data.username}<br>이메일: ${data.email}`;
+            resultDiv.style.color = "green";
+        } else {
+            resultDiv.innerText = "가입 실패. 다시 시도하세요.";
+            resultDiv.style.color = "red";
+        }
+    });
+</script>
 </body>
 </html>

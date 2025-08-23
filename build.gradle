@@ -19,9 +19,55 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    //Spring-Boot 기본 의존성
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Spring Boot 기본 웹 MVC 기능 (Controller, Rest API 등)
+    implementation 'org.springframework.boot:spring-boot-starter-validation' // Spring Validation (@Valid 등 유효성 검사용)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // Spring Boot Actuator (서버 상태, 헬스 체크, 메트릭 등 모니터링 도구)
+    implementation 'org.springframework.boot:spring-boot-starter-security' // Spring Security (로그인/인증/인가 등 보안 기능)
+
+    // 개발/테스트 환경 설정
+    developmentOnly 'org.springframework.boot:spring-boot-devtools' // 개발 도중 자동 리로딩 지원 (핫리로딩)
+    testImplementation 'org.springframework.boot:spring-boot-starter-test' // 테스트 관련 의존성 (JUnit, Assert 등)
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher' // JUnit 플랫폼 런처 (테스트 실행 환경 설정용)
+
+    //테이블 처리 & 매핑
+    implementation 'org.modelmapper:modelmapper:3.1.1' // ModelMapper (DTO <-> Entity 간 매핑 편의성 제공)
+    implementation 'net.coobird:thumbnailator:0.4.13' // Thumbnailator (이미지 리사이징/썸네일 생성 라이브러리)
+
+    //JPA & QueryDSL
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // JPA 설정 및 Hibernate 연동 (Spring Data JPA 사용 시 필수)
+    implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta' // QueryDSL JPA 지원 라이브러리 (타입 안전한 쿼리 작성을 위한 도구)
+    annotationProcessor( // QueryDSL 코드 생성을 위한 어노테이션 프로세서
+            "jakarta.persistence:jakarta.persistence-api",      // JPA 명세
+            "jakarta.annotation:jakarta.annotation-api",        // Jakarta 어노테이션 명세
+            "com.querydsl:querydsl-apt:5.1.0:jakarta"            // QueryDSL 코드 생성기
+    )
+
+    //Thymeleaf + Security
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf' // Thymeleaf 템플릿 엔진 (HTML 렌더링을 위한)
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+    // Thymeleaf + Spring Security 통합 (템플릿에서 인증 상태에 따른 UI 처리)
+    testImplementation 'org.springframework.security:spring-security-test'
+    // Spring Security 테스트 지원 (MockMvc 등 보안 테스트 도구)
+
+
+    //JMT
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5' // JWT 토큰 생성을 위한 API (Json Web Token 생성 및 파싱)
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5' // JWT 구현체 (암호화 및 서명)
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5' // JWT JSON 처리용 Jackson 연동
+
+    //DataBase
+    implementation 'org.mariadb.jdbc:mariadb-java-client' // MariaDB JDBC 드라이버 (DB 연결을 위한 드라이버)
+
+    // lombok
+    compileOnly 'org.projectlombok:lombok' // 롬복 (Getter/Setter 등 코드 자동 생성 도구)
+    annotationProcessor 'org.projectlombok:lombok'
+
+    //암호 복호화 사용
+    implementation("org.jasypt:jasypt:1.9.3")
 }
 
 tasks.named('test') {

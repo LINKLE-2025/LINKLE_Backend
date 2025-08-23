@@ -1,4 +1,4 @@
-package com.linkle.sample;
+package com.linkle.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +11,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserResponseDTO {
+public class SampleUserResponseDTO {
 	private Long id;
 	private String username;
 	private String email;

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spring Boot Test Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; line-height: 1.6; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .wrap { display: grid; grid-template-columns: 1fr 340px; height: 100dvh; }
+    #map { width: 100%; height: 100%; }
+    .sidebar { border-left: 1px solid #e5e7eb; padding: 16px; overflow: auto; }
+    .controls { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; position: sticky; top: 0; background: inherit; padding-bottom: 8px; }
+    .badge { display:inline-block; padding:2px 8px; border:1px solid #d1d5db; border-radius:999px; font-size:12px; }
+    .item { border:1px solid #e5e7eb; border-radius:10px; padding:10px; margin-bottom:10px; box-shadow: 0 2px 8px rgba(0,0,0,.05); cursor:pointer; }
+    .item h4 { margin: 0 0 4px; font-size:16px; }
+    .muted { color:#6b7280; font-size:12px; }
+    .empty { border:1px dashed #d1d5db; border-radius:10px; padding:16px; text-align:center; color:#6b7280; }
+    .hint { font-size:12px; color:#6b7280; margin-top:6px; }
+  </style>
+  <!-- services 라이브러리 필수 -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=bc33a8c71e1511a6319771ff29cdd526&libraries=services"></script>
+</head>
+<body>
+<div class="wrap">
+  <div id="map"></div>
+  <aside class="sidebar">
+    <div class="controls">
+      <span class="badge">반경(m)</span>
+      <input id="radiusRange" type="range" min="50" max="1000" value="50" step="50" />
+      <span id="radiusValue">1</span>
+      <button id="reSearchBtn">다시 검색</button>
+    </div>
+    <div id="status" class="hint">지도를 클릭하면 해당 지점 주변(기본 1m)의 음식점을 보여줍니다.</div>
+    <div id="results"></div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  let map, marker, infoWindow, places, lastClicked;
+  const resultsEl = document.getElementById('results');
+  const statusEl  = document.getElementById('status');
+  const radiusEl  = document.getElementById('radiusRange');
+  const radiusVal = document.getElementById('radiusValue');
+  const reSearch  = document.getElementById('reSearchBtn');
+
+  radiusEl.addEventListener('input', () => {
+    radiusVal.textContent = radiusEl.value;
+  });
+
+  function initMap(lat, lng) {
+    const container = document.getElementById('map');
+    map = new kakao.maps.Map(container, { center: new kakao.maps.LatLng(lat, lng), level: 3 });
+    places = new kakao.maps.services.Places();
+    infoWindow = new kakao.maps.InfoWindow({ removable: true });
+
+    kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+      const latlng = mouseEvent.latLng;
+      placeOrMoveMarker(latlng, '선택한 지점');
+      lastClicked = latlng;
+      searchRestaurants(latlng);
+    });
+  }
+
+  function placeOrMoveMarker(latlng, titleText) {
+    if (!marker) {
+      marker = new kakao.maps.Marker({ position: latlng, map });
+    } else {
+      marker.setPosition(latlng);
+    }
+    map.panTo(latlng);
+
+    // 인포윈도우 표시
+    if (titleText) {
+      infoWindow.setContent(`<div style="padding:6px 8px; font-size:13px;">${titleText}</div>`);
+      infoWindow.open(map, marker);
+    } else {
+      infoWindow.close();
+    }
+  }
+
+  function searchRestaurants(latlng) {
+    const radius = parseInt(radiusEl.value, 10) || 1;
+    statusEl.textContent = `검색 중… (반경 ${radius}m)`;
+    resultsEl.innerHTML = '';
+
+    const options = {
+      location: latlng,
+      radius: radius,
+      sort: kakao.maps.services.SortBy.DISTANCE
+    };
+
+    // FD6: 음식점
+    places.categorySearch('FD6', function(data, status) {
+      if (status !== kakao.maps.services.Status.OK) {
+        resultsEl.innerHTML = `<div class="empty">결과가 없습니다. 반경을 늘려보세요.</div>`;
+        statusEl.textContent = `검색 완료 (0개)`;
+        return;
+      }
+
+      const within = data.filter(p => {
+        const d = parseInt(p.distance || '999999', 10);
+        return !isNaN(d) && d <= radius;
+      });
+
+      statusEl.textContent = `검색 완료 (${within.length}개)`;
+      if (within.length === 0) {
+        resultsEl.innerHTML = `
+          <div class="empty">
+            반경 ${radius}m 이내에는 결과가 없습니다.
+            <div class="hint">※ 1m는 너무 좁을 수 있어요. 슬라이더로 반경을 늘려보세요.</div>
+          </div>`;
+        return;
+      }
+
+      renderList(within);
+    }, options);
+  }
+
+  function renderList(placesList) {
+    resultsEl.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
+    placesList.slice(0, 50).forEach((p, idx) => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <h4>${idx + 1}. ${p.place_name}</h4>
+        <div class="muted">${p.road_address_name || p.address_name || ''}</div>
+        <div class="muted">거리: ${p.distance ? p.distance + 'm' : '-'}</div>
+        <div class="muted">${p.phone ? '전화: ' + p.phone : ''}</div>
+      `;
+
+      // ✅ 리스트 클릭 → 해당 위치로 마커 이동 + 인포윈도우 표시
+      div.addEventListener('click', () => {
+        const latlng = new kakao.maps.LatLng(p.y, p.x);
+        placeOrMoveMarker(latlng, p.place_name);
+      });
+
+      frag.appendChild(div);
+    });
+
+    resultsEl.appendChild(frag);
+  }
+
+  reSearch.addEventListener('click', () => {
+    if (lastClicked) {
+      searchRestaurants(lastClicked);
+    } else {
+      statusEl.textContent = '먼저 지도를 클릭해 위치를 선택하세요.';
+    }
+  });
+
+  // 초기: 현재 위치 → 실패 시 서울시청
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => initMap(pos.coords.latitude, pos.coords.longitude),
+      ()  => initMap(37.5662952, 126.9779451)
+    );
+  } else {
+    initMap(37.5662952, 126.9779451);
+  }
+})();
+</script>
+</body>
+</html>

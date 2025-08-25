@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>카카오맵 + 커스텀오버레이 + 날씨</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- 스타일 -->
+  <style>
+    html, body {height:100%; margin:0;}
+    #map {width:100%; height:100%;}
+
+    /* 오버레이 기본 컨테이너 */
+    .place-overlay {
+      position: relative;
+      background:#fff;
+      border-radius:12px;
+      box-shadow:0 8px 24px rgba(0,0,0,.16);
+      width:320px;
+      overflow:hidden;
+      font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+    .place-header {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 14px; border-bottom:1px solid #eee;
+    }
+    .place-thumb {
+      width:64px; height:64px; flex:none; border-radius:8px; object-fit:cover; background:#f2f2f2;
+    }
+    .place-title {font-weight:700; font-size:16px; line-height:1.2;}
+    .place-body {padding:12px 14px; display:grid; gap:6px; font-size:13px; color:#333;}
+    .muted {color:#666;}
+    .actions {display:flex; gap:8px; margin-top:6px;}
+    .btn {
+      appearance:none; border:1px solid #e5e5e5; border-radius:8px; padding:8px 10px; font-size:12px;
+      background:#fafafa; cursor:pointer; text-decoration:none; color:#222; display:inline-flex; align-items:center; gap:6px;
+    }
+    .btn:hover {background:#f0f0f0;}
+    .close-x {
+      position:absolute; top:8px; right:8px; width:28px; height:28px; border:none; border-radius:50%;
+      background:#f6f6f6; cursor:pointer; font-weight:700;
+    }
+    .weather {
+      display:flex; align-items:center; gap:10px; padding:10px 14px; background:#fbfbff; border-top:1px dashed #e6e8ff;
+      font-size:13px;
+    }
+    .weather .temp {font-weight:700; font-size:14px;}
+    .loading {color:#666; font-style:italic;}
+    .error {color:#d33; font-weight:600;}
+  </style>
+
+  <!-- 카카오맵 JS SDK -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=bc33a8c71e1511a6319771ff29cdd526&libraries=services"></script>
+</head>
+<body>
+<div id="map"></div>
+
+<script>
+  // ====== 설정값 ======
+  const OPENWEATHERMAP_API_KEY = "3bbe8ca3edf58696489aa029e6758038"; // 본인 키로 교체
+  const OPENWEATHER_ENDPOINT = "https://api.openweathermap.org/data/2.5/weather";
+
+  // 예시 장소 데이터 (원하는 만큼 추가/DB 연동 가능)
+  const PLACES = [
+    {
+      id: "sch-001",
+      name: "서울중산초등학교",
+      lat: 37.604486, lon: 126.922842,
+      address: "서울 은평구 중산서길 61 (중산동 212)",
+      phone: "02-373-6305",
+      photo: "https://via.placeholder.com/128x96?text=School" // 실제 이미지 URL로 교체 가능
+    },
+    // {id:"...", name:"...", lat:..., lon:..., address:"...", phone:"", photo:""}
+  ];
+
+  // ====== 지도 초기화 ======
+  const map = new kakao.maps.Map(document.getElementById("map"), {
+    center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청 부근
+    level: 6
+  });
+
+  // ====== 공용 오버레이 인스턴스 (한 개만 써서 성능/관리 용이) ======
+  const overlay = new kakao.maps.CustomOverlay({ yAnchor: 1 });
+
+  // ====== 마커 생성 & 클릭 이벤트 ======
+  PLACES.forEach(place => {
+    const marker = new kakao.maps.Marker({
+      map,
+      position: new kakao.maps.LatLng(place.lat, place.lon),
+      title: place.name
+    });
+
+    kakao.maps.event.addListener(marker, "click", async () => {
+      // 먼저 로딩 상태의 오버레이를 띄운 뒤 날씨 가져와 갱신
+      const loadingHTML = buildOverlayHTML(place, { loading: true });
+      overlay.setContent(loadingHTML);
+      overlay.setPosition(marker.getPosition());
+      overlay.setMap(map);
+      attachCloseHandler();
+
+      try {
+        const weather = await fetchWeather(place.lat, place.lon);
+        const contentHTML = buildOverlayHTML(place, { weather });
+        overlay.setContent(contentHTML);
+        attachCloseHandler();
+      } catch (err) {
+        const errorHTML = buildOverlayHTML(place, { error: err?.message || "날씨 정보를 불러오지 못했습니다." });
+        overlay.setContent(errorHTML);
+        attachCloseHandler();
+      }
+    });
+  });
+
+  // ====== 길찾기 링크(카카오맵) 생성 ======
+  function buildDirectionsURL(lat, lon, name) {
+    // 카카오맵 장소이동 (웹)
+    const q = encodeURIComponent(name || "목적지");
+    return `https://map.kakao.com/link/to/${q},${lat},${lon}`;
+  }
+
+  // ====== 날씨 가져오기 (OpenWeatherMap: 섭씨, 한국어) ======
+  async function fetchWeather(lat, lon) {
+    const url = `${OPENWEATHER_ENDPOINT}?lat=${lat}&lon=${lon}&appid=${OPENWEATHERMAP_API_KEY}&units=metric&lang=kr`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("OpenWeather 응답 오류");
+    const data = await res.json();
+    return {
+      temp: Math.round(data.main.temp),
+      feels: Math.round(data.main.feels_like),
+      desc: data.weather?.[0]?.description || "날씨 정보",
+      icon: data.weather?.[0]?.icon || null, // ex) "10d"
+      wind: data.wind?.speed,
+      humidity: data.main?.humidity
+    };
+  }
+
+  // ====== 오버레이 HTML 생성 ======
+  function buildOverlayHTML(place, state) {
+    const { name, address, phone, photo, lat, lon } = {
+      ...place, lat: place.lat, lon: place.lon
+    };
+
+    const directionsURL = buildDirectionsURL(lat, lon, name);
+
+    // 상태블록 (loading / error / weather)
+    let statusBlock = "";
+    if (state?.loading) {
+      statusBlock = `<div class="weather"><span class="loading">날씨 불러오는 중...</span></div>`;
+    } else if (state?.error) {
+      statusBlock = `<div class="weather"><span class="error">⚠ ${state.error}</span></div>`;
+    } else if (state?.weather) {
+      const w = state.weather;
+      const iconURL = w.icon ? `https://openweathermap.org/img/wn/${w.icon}@2x.png` : "";
+      statusBlock = `
+          <div class="weather">
+            ${iconURL ? `<img src="${iconURL}" alt="날씨" width="40" height="40" />` : ""}
+            <div>
+              <div><span class="temp">${w.temp}℃</span> · 체감 ${w.feels}℃</div>
+              <div class="muted">${w.desc} · 습도 ${w.humidity ?? "-"}% · 바람 ${w.wind ?? "-"} m/s</div>
+            </div>
+          </div>
+        `;
+    }
+
+    return `
+        <div class="place-overlay">
+          <button class="close-x" title="닫기" onclick="window.__closeOverlay && window.__closeOverlay()">×</button>
+          <div class="place-header">
+            <img class="place-thumb" src="${photo || ""}" alt="thumb" onerror="this.style.display='none'">
+            <div class="place-title">${escapeHTML(name)}</div>
+          </div>
+          <div class="place-body">
+            ${address ? `<div>📍 <span class="muted">${escapeHTML(address)}</span></div>` : ""}
+            ${phone ? `<div>📞 <a class="muted" href="tel:${phone.replaceAll('-','')}">${escapeHTML(phone)}</a></div>` : ""}
+            <div class="actions">
+              <a class="btn" href="${directionsURL}" target="_blank" rel="noopener">🧭 길찾기</a>
+              ${phone ? `<a class="btn" href="tel:${phone.replaceAll('-','')}" target="_blank" rel="noopener">☎ 전화</a>` : ""}
+            </div>
+          </div>
+          ${statusBlock}
+        </div>
+      `;
+  }
+
+  // 오버레이 닫기 핸들러 바인딩
+  function attachCloseHandler() {
+    window.__closeOverlay = () => overlay.setMap(null);
+  }
+
+  // XSS 간단 방지
+  function escapeHTML(str="") {
+    return String(str)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+  }
+
+  // 첫 장소로 자동 이동(선택)
+  if (PLACES[0]) {
+    const c = new kakao.maps.LatLng(PLACES[0].lat, PLACES[0].lon);
+    map.setCenter(c);
+  }
+</script>
+</body>
+</html>

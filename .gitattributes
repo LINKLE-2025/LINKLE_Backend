@@ -1,3 +1,71 @@
-/gradlew text eol=lf
+###############################################################################
+# Line endings & encoding (모든 텍스트 파일 LF 고정, UTF-8 권장)
+###############################################################################
+* text=auto eol=lf
+
+# 대표 텍스트 파일들(UTF-8 가정)
+*.java       text working-tree-encoding=UTF-8
+*.kt         text working-tree-encoding=UTF-8
+*.groovy     text working-tree-encoding=UTF-8
+*.xml        text working-tree-encoding=UTF-8
+*.yml        text working-tree-encoding=UTF-8
+*.yaml       text working-tree-encoding=UTF-8
+*.properties text working-tree-encoding=UTF-8
+*.gradle     text working-tree-encoding=UTF-8
+*.md         text working-tree-encoding=UTF-8
+*.sql        text working-tree-encoding=UTF-8
+*.txt        text working-tree-encoding=UTF-8
+Dockerfile   text
+
+# Gradle wrapper 크로스플랫폼 처리
+gradlew      text eol=lf
+gradlew.bat  text eol=crlf
+
+# 스크립트
+*.sh  text eol=lf
 *.bat text eol=crlf
-*.jar binary
+*.cmd text eol=crlf
+
+###############################################################################
+# Binaries & secrets (diff/merge 비활성화)
+###############################################################################
+# JVM/아티팩트
+*.class binary
+*.jar   binary
+*.war   binary
+*.ear   binary
+
+# 인증서/키(절대 커밋 금지 권장)
+*.jks    binary
+*.keystore binary
+*.p12    binary
+*.cer    binary
+*.der    binary
+*.pem    binary merge=ours
+*.key    binary merge=ours
+*.crt    binary
+*.cert   binary
+
+# 이미지/문서/압축
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.tar  binary
+*.gz   binary
+*.7z   binary
+
+# (혹시라도 커밋될 수 있는) 빌드 산출물
+target/** binary
+build/**  binary
+out/**    binary
+
+###############################################################################
+# GitHub Linguist (언어 통계/검색에서 제외하고 싶을 때)
+###############################################################################
+target/** linguist-generated=true
+build/**  linguist-generated=true
+*.min.js  linguist-generated=true

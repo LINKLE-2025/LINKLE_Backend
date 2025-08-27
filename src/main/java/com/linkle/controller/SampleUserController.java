@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class SampleUserController {
+
 	private final SampleUserService sampleUserService;
 
 	@PostMapping("/register")

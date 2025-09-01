@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.linkle.dto.SampleUserRequestDTO;
 import com.linkle.dto.SampleUserResponseDTO;
-import com.linkle.service.SampleUserService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,6 +20,7 @@ public class SampleUserController {
 	@PostMapping("/register")
 	public ResponseEntity<SampleUserResponseDTO> register(@RequestBody SampleUserRequestDTO dto) {
 		SampleUserResponseDTO result = sampleUserService.register(dto);
-		return ResponseEntity.ok(result);
+
+                return ResponseEntity.ok(result);
 	}
 }

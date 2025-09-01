@@ -1,5 +1,7 @@
 HELP.md
-.gradle
+
+### Gradle ###
+.gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -18,7 +20,7 @@ bin/
 !**/src/test/**/bin/
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -51,11 +53,16 @@ Thumbs.db
 # === 환경변수 / 시크릿 ===
 .env
 .env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
 application-*.yml
 application-*.properties
-!application-example.properties
+!application-example.properties   # 예시 파일만 커밋 허용
 
-# === 빌드 생성 JAR/WAR ===
+# === 빌드 생성 JAR/WAR/EAR ===
 *.jar
 *.war
 *.ear
@@ -64,13 +71,12 @@ application-*.properties
 /test-output/
 /build/reports/
 /build/test-results/
+/target/
 
-# === Docker ===
+# === Docker / 컨테이너 관련 ===
 *.pid
 docker-compose.override.yml
 
-# === 기타 커먼 캐시 ===
-/target/
+# === 캐시 / 임시 파일 ===
 .cache/
 .idea_modules/
-.gradle/

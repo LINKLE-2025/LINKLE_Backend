@@ -53,6 +53,7 @@ Thumbs.db
 .env.*
 application-*.yml
 application-*.properties
+!application-example.properties
 
 # === 빌드 생성 JAR/WAR ===
 *.jar
@@ -73,6 +74,3 @@ docker-compose.override.yml
 .cache/
 .idea_modules/
 .gradle/
-
-
-application.properties

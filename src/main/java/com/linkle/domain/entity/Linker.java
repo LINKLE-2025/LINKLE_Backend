@@ -1,6 +1,6 @@
 package com.linkle.domain.entity;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import jakarta.persistence.CascadeType;
@@ -12,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -36,8 +37,8 @@ public class Linker {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "adress_name")
-    private String adressName;
+    @Column(name = "address_name")
+    private String addressName;
 
     @Column(name = "address", nullable = false)
     private String address;
@@ -46,10 +47,10 @@ public class Linker {
     private String addressDetail;
 
     @Column(name = "location_x", nullable = false)
-    private Double  locationX;
+    private Double locationX;
 
     @Column(name = "location_y", nullable = false)
-    private Double  locationY;
+    private Double locationY;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "state", nullable = false)
@@ -59,7 +60,7 @@ public class Linker {
     private Long categoryId;
 
     @Column(name = "created_date", nullable = false)
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "memo")
     private String memo;
@@ -70,4 +71,14 @@ public class Linker {
     @OneToMany(mappedBy = "linker", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Post> posts;
 
+    // 엔티티 저장 직전에 기본값 설정
+    @PrePersist
+    public void prePersist() {
+        if (createdDate == null) {
+            createdDate = LocalDateTime.now(); // 생성 시간 자동 세팅
+        }
+        if (state == null) {
+            state = LinkerState.ACTIVATED; // 기본 상태 설정
+        }
+    }
 }

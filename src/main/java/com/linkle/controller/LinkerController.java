@@ -29,8 +29,9 @@ public class LinkerController {
         log.info("===== LinkerDTO 수신 =====");
         log.info("링커 아이디: {}", linkerDTO.getLinkerId());
         log.info("이름: {}", linkerDTO.getName());
-        log.info("주소 이름: {}", linkerDTO.getAdressName());
+        log.info("상호 이름: {}", linkerDTO.getAddressName());
         log.info("주소: {}", linkerDTO.getAddress());
+        log.info("주소 앞자리만: {}", linkerDTO.getAddressDetail());
         log.info("위도(X): {}", linkerDTO.getLocationX());
         log.info("경도(Y): {}", linkerDTO.getLocationY());
         log.info("상태: {}", linkerDTO.getState());

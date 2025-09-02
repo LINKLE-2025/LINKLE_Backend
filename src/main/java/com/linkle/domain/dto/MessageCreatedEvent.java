@@ -43,7 +43,7 @@ public class MessageCreatedEvent {
             .text(msg.getText())                 // ChatMessage.getText()
             .createdDate(msg.getCreatedDate());     // *Date 네이밍 규칙
 
-        User sender = msg.getUser();
+        User sender = msg.getUserId();
         if (sender != null) {
             b.senderId(sender.getUserId())
                 .senderName(sender.getName())

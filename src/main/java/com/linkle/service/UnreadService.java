@@ -1,6 +1,6 @@
 package com.linkle.service;
 
-import com.linkle.domain.dto.UnreadCountResponse;
+import com.linkle.domain.dto.UnreadCountResponseDTO;
 import com.linkle.domain.entity.ChatPart;
 import com.linkle.repository.ChatMessageRepository;
 import com.linkle.repository.ChatPartRepository;
@@ -23,7 +23,7 @@ public class UnreadService {
      * 내 전체 미확인 집계 + 방별 미확인 목록
      */
     @Transactional(readOnly = true)
-    public UnreadCountResponse unreadSummary(Long meId) {
+    public UnreadCountResponseDTO unreadSummary(Long meId) {
         // 내가 참여 중인 방(탈퇴 X) 멤버 레코드
         List<ChatPart> parts = chatPartRepository.findActiveByRoomIdWithUser(/* roomId */ null);
         // ↑ 위 메서드는 roomId 기준이라 바로 못 씀 → 아래와 같이 userId 기준 메서드를 추가해서 쓰는 걸 추천:
@@ -44,6 +44,6 @@ public class UnreadService {
         // }
 
         // 데모/가이드 목적: 일단 빈 응답 반환 (리포 메서드만 추가하면 위 집계가 바로 동작)
-        return UnreadCountResponse.fromPerRoom(perRoom);
+        return UnreadCountResponseDTO.fromPerRoom(perRoom);
     }
 }

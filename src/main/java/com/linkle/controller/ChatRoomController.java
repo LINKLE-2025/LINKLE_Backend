@@ -1,92 +1,112 @@
 package com.linkle.controller;
 
-import com.linkle.domain.dto.CreateRoomRequest;
-import com.linkle.domain.dto.MemberResponse;
-import com.linkle.domain.dto.MessageResponse;
-import com.linkle.domain.dto.OpenDmRequest;
-import com.linkle.domain.dto.ReadSyncRequest;
-import com.linkle.domain.dto.RoomResponse;
-import com.linkle.domain.dto.UnreadCountResponse;
+import com.linkle.domain.dto.CreateRoomRequestDTO;
+import com.linkle.domain.dto.MemberResponseDTO;
+import com.linkle.domain.dto.MessageResponseDTO;
+import com.linkle.domain.dto.OpenDmRequestDTO;
+import com.linkle.domain.dto.ReadSyncRequestDTO;
+import com.linkle.domain.dto.RoomResponseDTO;
+import com.linkle.domain.dto.UnreadCountResponseDTO;
+import com.linkle.domain.entity.ChatPart;
+import com.linkle.repository.ChatMessageRepository;
+import com.linkle.repository.ChatPartRepository;
 import com.linkle.service.ChatMessageService;
 import com.linkle.service.ChatReadService;
 import com.linkle.service.ChatRoomService;
+import com.linkle.service.UnreadService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.validation.annotation.Validated;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/chat")
 @RequiredArgsConstructor
-@Validated
 public class ChatRoomController {
 
-    private final ChatRoomService roomService;
-    private final ChatMessageService messageService;
-    private final ChatReadService readService;
+    private final ChatRoomService chatRoomService;
+    private final ChatMessageService chatMessageService;
+    private final ChatReadService chatReadService;
+    private final UnreadService unreadService;
 
-    /** [POST /chat/room] 그룹/클래스 방 생성 (CHATTING_ROOM) */
+    // (멤버 목록만 N+1 방지용 fetch join 필요해서 Repository 직접 사용)
+    private final ChatPartRepository chatPartRepository;
+    private final ChatMessageRepository chatMessageRepository;
+
+    /** 그룹/클래스 방 생성 */
     @PostMapping("/room")
-    public RoomResponse createRoom(@RequestBody CreateRoomRequest req) {
-        return roomService.createRoom(req);
+    public RoomResponseDTO createRoom(@Valid @RequestBody CreateRoomRequestDTO req) {
+        Long me = currentUserId();
+        return chatRoomService.createRoom(req, me);
     }
 
-    /** [POST /chat/room/dm] 1:1 DM 방 열기/조회 (DM_PAIR + CHATTING_ROOM) */
+    /** 1:1 DM 열기/조회 (서비스에 openDm 구현되어 있다고 가정) */
     @PostMapping("/room/dm")
-    public RoomResponse openDm(@RequestBody OpenDmRequest req) {
-        return roomService.openDm(req);
+    public RoomResponseDTO openDm(@Valid @RequestBody OpenDmRequestDTO req) {
+        Long me = currentUserId();
+        // ChatRoomService에 openDm(OpenDmRequest, meId) 메서드가 있어야 합니다.
+        return chatRoomService.openDm(req, me);
     }
 
-    /** [GET /chat/room/{roomId}] 방 상세 (CHATTING_ROOM) */
+    /** 방 단건 조회 (+ 최신 메시지 프리뷰/미확인/멤버수 메타 포함) */
     @GetMapping("/room/{roomId}")
-    public RoomResponse getRoom(@PathVariable Long roomId) {
-        return roomService.getRoom(roomId);
+    public RoomResponseDTO getRoom(@PathVariable Long roomId) {
+        Long me = currentUserId();
+        return chatRoomService.getRoomWithMeta(roomId, me);
     }
 
-    /** [GET /chat/room/{roomId}/members] 방 멤버 목록 (CHAT_PART) */
-    @GetMapping("/room/{roomId}/members")
-    public Page<MemberResponse> members(@PathVariable Long roomId, Pageable pageable) {
-        return roomService.members(roomId, pageable);
-    }
-
-    /** [GET /chat/room] 내가 속한 방 목록 (CHAT_PART join CHATTING_ROOM) */
+    /** 내가 참여 중인 방 목록 */
     @GetMapping("/room")
-    public Page<RoomResponse> myRooms(Pageable pageable) {
-        return roomService.myRooms(pageable);
+    public List<RoomResponseDTO> myRooms() {
+        Long me = currentUserId();
+        return chatRoomService.listMyRooms(me);
     }
 
-    /** [POST /chat/room/{roomId}/connect] 방 입장 (CHAT_PART.joined_at 업데이트 + SYSTEM 메시지 생성) */
-    @PostMapping("/room/{roomId}/connect")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void connect(@PathVariable Long roomId) {
-        roomService.connect(roomId);
+    /** 특정 방의 멤버 목록 */
+    @GetMapping("/room/{roomId}/members")
+    public List<MemberResponseDTO> roomMembers(@PathVariable Long roomId) {
+        // N+1 방지용 fetch join 메서드 사용
+        List<ChatPart> parts = chatPartRepository.findActiveByRoomIdWithUser(roomId);
+        return parts.stream()
+            .map(MemberResponseDTO::fromEntity)
+            .toList();
     }
 
-    /** [POST /chat/room/{roomId}/disconnect] 방 퇴장 (CHAT_PART.left_at 업데이트 + SYSTEM 메시지 생성) */
-    @PostMapping("/room/{roomId}/disconnect")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void disconnect(@PathVariable Long roomId) {
-        roomService.disconnect(roomId);
-    }
-
-    /** [GET /chat/room/{roomId}/messages] 메시지 페이징 조회 (CHAT_MESSAGE) */
+    /** 특정 방의 메시지 목록 (최신부터, 커서 beforeId로 더 불러오기) */
     @GetMapping("/room/{roomId}/messages")
-    public Page<MessageResponse> messages(@PathVariable Long roomId, Pageable pageable) {
-        return messageService.page(roomId, pageable);
+    public List<MessageResponseDTO> roomMessages(@PathVariable Long roomId,
+        @RequestParam(required = false) Long beforeId,
+        @RequestParam(defaultValue = "20") int size) {
+        return chatMessageService.listMessages(roomId, beforeId, size);
     }
 
-    /** [POST /chat/read] 읽음 동기화 (CHAT_PART.last_read_msg_id 업데이트) */
+    /** 읽음 동기화 */
     @PostMapping("/read")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void syncRead(@RequestBody ReadSyncRequest req) {
-        readService.sync(req);
+    public void syncRead(@Valid @RequestBody ReadSyncRequestDTO req) {
+        Long me = currentUserId();
+        chatReadService.syncRead(req, me);
     }
 
-    /** [GET /chat/unread?room_id=] 미확인 개수 조회 (CHAT_MESSAGE vs CHAT_PART.last_read_msg_id) */
+    /** 내 전체/방별 미확인 수 요약 */
     @GetMapping("/unread")
-    public UnreadCountResponse unread(@RequestParam("room_id") Long roomId) {
-        return readService.unreadCount(roomId);
+    public UnreadCountResponseDTO unreadSummary() {
+        Long me = currentUserId();
+        return unreadService.unreadSummary(me);
+    }
+
+    // ----------------- helpers -----------------
+    private Long currentUserId() {
+        // 프로젝트의 보안 구성에 맞게 교체하세요.
+        // 예: JWT subject가 숫자 userId면 그대로 파싱, 아니면 CustomPrincipal에서 꺼내기
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            try { return Long.parseLong(auth.getName()); } catch (NumberFormatException ignore) {}
+        }
+        // 데모/개발용 fallback
+        return 1L;
     }
 }

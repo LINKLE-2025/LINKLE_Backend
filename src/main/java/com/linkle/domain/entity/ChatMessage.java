@@ -24,7 +24,7 @@ public class ChatMessage {
     // SYSTEM(서버) 메시지일 때는 NULL
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private User userId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)

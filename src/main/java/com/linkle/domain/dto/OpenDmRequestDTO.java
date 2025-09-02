@@ -5,7 +5,7 @@ import lombok.*;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
-public class OpenDmRequest {
+public class OpenDmRequestDTO {
 
     @NotNull(message = "DM 대상 사용자 ID는 필수입니다")
     private Long targetUserId;

@@ -5,7 +5,7 @@ import lombok.*;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
-public class ReadSyncRequest {
+public class ReadSyncRequestDTO {
 
     @NotNull(message = "roomId는 필수입니다")
     private Long roomId;

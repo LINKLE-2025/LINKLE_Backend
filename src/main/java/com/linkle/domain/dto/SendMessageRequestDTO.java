@@ -9,7 +9,7 @@ import com.linkle.domain.entity.MessageType; // TEXT / SYSTEM 등
 
 @Getter @Builder
 @NoArgsConstructor @AllArgsConstructor
-public class SendMessageRequest {
+public class SendMessageRequestDTO {
 
     @NotNull
     private Long roomId;

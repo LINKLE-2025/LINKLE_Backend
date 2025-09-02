@@ -15,7 +15,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UnreadCountResponse {
+public class UnreadCountResponseDTO {
 
     /** 모든 방의 미확인 합계 */
     private Integer totalUnread;
@@ -36,8 +36,8 @@ public class UnreadCountResponse {
     // ======= 팩토리 메서드들 =======
 
     /** 방별 미확인 Map(roomId -> count)을 한 번에 DTO로 변환 */
-    public static UnreadCountResponse fromPerRoom(Map<Long, Integer> perRoom) {
-        UnreadCountResponse res = new UnreadCountResponse();
+    public static UnreadCountResponseDTO fromPerRoom(Map<Long, Integer> perRoom) {
+        UnreadCountResponseDTO res = new UnreadCountResponseDTO();
         if (perRoom == null || perRoom.isEmpty()) {
             res.setTotalUnread(0);
             res.setRooms(new ArrayList<>());
@@ -60,8 +60,8 @@ public class UnreadCountResponse {
     }
 
     /** 단일 방 미확인 응답(부분 갱신 시 유용) */
-    public static UnreadCountResponse forRoom(Long roomId, int unreadCount) {
-        return UnreadCountResponse.builder()
+    public static UnreadCountResponseDTO forRoom(Long roomId, int unreadCount) {
+        return UnreadCountResponseDTO.builder()
             .totalUnread(unreadCount)
             .rooms(List.of(RoomUnread.builder()
                 .roomId(roomId)
@@ -71,8 +71,8 @@ public class UnreadCountResponse {
     }
 
     /** 비어있는 기본 응답 */
-    public static UnreadCountResponse empty() {
-        return UnreadCountResponse.builder()
+    public static UnreadCountResponseDTO empty() {
+        return UnreadCountResponseDTO.builder()
             .totalUnread(0)
             .rooms(new ArrayList<>())
             .build();

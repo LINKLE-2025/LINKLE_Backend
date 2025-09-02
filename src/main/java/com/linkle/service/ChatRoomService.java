@@ -1,11 +1,13 @@
 package com.linkle.service;
 
-import com.linkle.domain.dto.CreateRoomRequest;
-import com.linkle.domain.dto.RoomResponse;
+import com.linkle.domain.dto.CreateRoomRequestDTO;
+import com.linkle.domain.dto.OpenDmRequestDTO;
+import com.linkle.domain.dto.RoomResponseDTO;
 import com.linkle.domain.entity.*;
 import com.linkle.repository.ChatMessageRepository;
 import com.linkle.repository.ChatPartRepository;
 import com.linkle.repository.ChatRoomRepository;
+import com.linkle.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,13 +25,13 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatPartRepository chatPartRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final UserRepository userRepository;
 
     /**
-     * 그룹/클래스 방 생성
-     * - DM 생성은 별도 OpenDm 로직 사용
+     * 그룹/클래스 방 생성 (DM은 OpenDmRequest 사용)
      */
     @Transactional
-    public RoomResponse createRoom(CreateRoomRequest req, Long ownerUserId) {
+    public RoomResponseDTO createRoom(CreateRoomRequestDTO req, Long ownerUserId) {
         if (req.getRoomType() == RoomType.DM) {
             throw new IllegalArgumentException("DM은 OpenDmRequest를 사용하세요.");
         }
@@ -37,7 +41,7 @@ public class ChatRoomService {
             .roomName(req.getRoomName())
             .description(req.getDescription())
             .memo(req.getMemo())
-            .themeColor(String.valueOf(req.getThemeColor())) // Integer -> String
+            .themeColor(String.valueOf(req.getThemeColor())) // Integer(1~9) → String 저장
             .entryFee(req.getEntryFee())
             .startDate(req.getStartDate() == null ? null :
                 req.getStartDate().atZone(ZoneId.systemDefault()).toInstant())
@@ -46,56 +50,147 @@ public class ChatRoomService {
 
         ChatRoom saved = chatRoomRepository.save(room);
 
-        // 방장 입장(OWNER)
-        ChatPart part = ChatPart.builder()
+        // 방장 입장(OWNER 개념이 엔티티에 없으니 기본 입장만 기록)
+        ChatPart ownerPart = ChatPart.builder()
             .id(new ChatPartId(saved.getRoomId(), ownerUserId))
             .room(saved)
-            // .user는 @MapsId("userId") 로 매핑되어 있어야 함. User 로딩은 필요 시 fetch join 사용.
+            .user(userRepository.getReferenceById(ownerUserId))
             .alarm(Alarm.ACTIVE)
             .build();
-        chatPartRepository.save(part);
+        chatPartRepository.save(ownerPart);
 
-        return RoomResponse.fromEntity(saved);
+        // 메타 채워서 응답
+        return toRoomResponseWithMeta(saved, ownerUserId);
     }
 
-    /** 단건 조회 + 메타 채워서 반환 (리스트/상세 공용) */
+    /**
+     * 1:1 DM 방 열기/조회
+     * - (1) 나(meId)가 참여 중인 DM들 중 target도 참여 중인 방이 있으면 재사용
+     * - (2) 없으면 DM 새로 생성 후 두 사용자 입장 레코드 생성
+     */
+    @Transactional
+    public RoomResponseDTO openDm(OpenDmRequestDTO req, Long meId) {
+        Long targetId = req.getTargetUserId();
+        if (Objects.equals(meId, targetId)) {
+            throw new IllegalArgumentException("자기 자신과의 DM은 생성할 수 없습니다.");
+        }
+        // 상대 존재 확인
+        User partner = userRepository.findById(targetId)
+            .orElseThrow(() -> new EntityNotFoundException("Target user not found: " + targetId));
+
+        // 1) 재사용 후보: 내가 참여 중인 방 중 DM만
+        List<ChatRoom> myRooms = chatRoomRepository.findActiveRoomsByUserId(meId);
+        Optional<ChatRoom> existingDm = myRooms.stream()
+            .filter(r -> r.getRoomType() == RoomType.DM)
+            .filter(r -> {
+                // 해당 방의 활성 멤버들 중 target이 있는지 확인
+                return chatPartRepository.findByRoom_RoomIdAndLeftDateIsNull(r.getRoomId()).stream()
+                    .anyMatch(cp -> cp.getUser().getUserId().equals(targetId));
+            })
+            .findFirst();
+
+        ChatRoom dmRoom;
+        if (existingDm.isPresent()) {
+            dmRoom = existingDm.get();
+        } else {
+            // 2) 새로 생성
+            dmRoom = chatRoomRepository.save(ChatRoom.builder()
+                .roomType(RoomType.DM)
+                .roomName(null) // DM은 별도 이름 없이 파트너 정보로 식별
+                .ownerId(null)
+                .build());
+
+            // 두 사용자 입장
+            ChatPart mePart = ChatPart.builder()
+                .id(new ChatPartId(dmRoom.getRoomId(), meId))
+                .room(dmRoom)
+                .user(userRepository.getReferenceById(meId))
+                .alarm(Alarm.ACTIVE)
+                .build();
+            ChatPart partnerPart = ChatPart.builder()
+                .id(new ChatPartId(dmRoom.getRoomId(), targetId))
+                .room(dmRoom)
+                .user(userRepository.getReferenceById(targetId))
+                .alarm(Alarm.ACTIVE)
+                .build();
+            chatPartRepository.saveAll(List.of(mePart, partnerPart));
+        }
+
+        // DM 응답(파트너 정보, 마지막 메시지/미확인 포함)
+        return toDmRoomResponse(dmRoom, meId, partner);
+    }
+
+    /**
+     * 방 단건 조회 + 메타(마지막 메시지, 미확인, 멤버 수 or DM 파트너) 포함
+     */
     @Transactional(readOnly = true)
-    public RoomResponse getRoomWithMeta(Long roomId, Long meId) {
+    public RoomResponseDTO getRoomWithMeta(Long roomId, Long meId) {
         ChatRoom room = chatRoomRepository.findById(roomId)
             .orElseThrow(() -> new EntityNotFoundException("Room not found: " + roomId));
-
-        // 최신 메시지
-        var lastMsgOpt = chatMessageRepository.findTopByRoom_RoomIdOrderByMessageIdDesc(roomId);
-        var lastMsg = lastMsgOpt.orElse(null);
-
-        // 내 미확인 수
-        var myPartOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(roomId, meId);
-        Long lastReadId = myPartOpt.map(ChatPart::getLastReadMsgId).orElse(null);
-        int unread = (lastReadId == null)
-            ? (int) chatMessageRepository.countByRoom_RoomId(roomId)
-            : (int) chatMessageRepository.countByRoom_RoomIdAndMessageIdGreaterThan(roomId, lastReadId);
-
-        // 멤버 수
-        int memberCount = (int) chatPartRepository.countByRoom_RoomIdAndLeftDateIsNull(roomId);
-
-        return RoomResponse.fromEntity(room, lastMsg, unread, memberCount);
+        return toRoomResponseWithMeta(room, meId);
     }
 
-    /** 내가 속한 방 목록 (탈퇴하지 않은) */
+    /**
+     * 내가 참여 중인 방 목록 (각 방에 메타 포함)
+     */
     @Transactional(readOnly = true)
-    public List<RoomResponse> listMyRooms(Long meId) {
+    public List<RoomResponseDTO> listMyRooms(Long meId) {
         List<ChatRoom> rooms = chatRoomRepository.findActiveRoomsByUserId(meId);
         return rooms.stream()
-            .map(r -> {
-                var lastMsg = chatMessageRepository.findTopByRoom_RoomIdOrderByMessageIdDesc(r.getRoomId()).orElse(null);
-                var part = chatPartRepository.findByRoom_RoomIdAndUser_UserId(r.getRoomId(), meId).orElse(null);
-                Long lastRead = part == null ? null : part.getLastReadMsgId();
-                int unread = (lastRead == null)
-                    ? (int) chatMessageRepository.countByRoom_RoomId(r.getRoomId())
-                    : (int) chatMessageRepository.countByRoom_RoomIdAndMessageIdGreaterThan(r.getRoomId(), lastRead);
-                int members = (int) chatPartRepository.countByRoom_RoomIdAndLeftDateIsNull(r.getRoomId());
-                return RoomResponse.fromEntity(r, lastMsg, unread, members);
-            })
+            .map(r -> toRoomResponseWithMeta(r, meId))
             .toList();
+    }
+
+    // =====================================================================
+    // 내부 유틸
+    // =====================================================================
+
+    private RoomResponseDTO toRoomResponseWithMeta(ChatRoom room, Long meId) {
+        if (room.getRoomType() == RoomType.DM) {
+            // DM 파트너 찾기 (활성 멤버 2명 중 나를 제외한 한 명)
+            List<ChatPart> parts = chatPartRepository.findByRoom_RoomIdAndLeftDateIsNull(room.getRoomId());
+            ChatPart partnerPart = parts.stream()
+                .filter(p -> !p.getUser().getUserId().equals(meId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("DM 파트너를 찾을 수 없습니다."));
+            User partner = partnerPart.getUser();
+            return toDmRoomResponse(room, meId, partner);
+        } else {
+            // 그룹/클래스: 마지막 메시지 / 미확인 / 멤버 수
+            var lastMsg = chatMessageRepository
+                .findTopByRoom_RoomIdOrderByMessageIdDesc(room.getRoomId())
+                .orElse(null);
+            var myPartOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(room.getRoomId(), meId);
+            Long lastReadId = myPartOpt.map(ChatPart::getLastReadMsgId).orElse(null);
+            int unread = computeUnread(room.getRoomId(), lastReadId);
+            int members = (int) chatPartRepository.countByRoom_RoomIdAndLeftDateIsNull(room.getRoomId());
+            return RoomResponseDTO.fromEntity(room, lastMsg, unread, members);
+        }
+    }
+
+    private RoomResponseDTO toDmRoomResponse(ChatRoom room, Long meId, User partner) {
+        var lastMsg = chatMessageRepository
+            .findTopByRoom_RoomIdOrderByMessageIdDesc(room.getRoomId())
+            .orElse(null);
+        var myPartOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(room.getRoomId(), meId);
+        Long lastReadId = myPartOpt.map(ChatPart::getLastReadMsgId).orElse(null);
+        int unread = computeUnread(room.getRoomId(), lastReadId);
+
+        return RoomResponseDTO.fromDm(
+            room,
+            partner.getUserId(),
+            partner.getNickname(),
+            partner.getImage(),
+            lastMsg,
+            unread
+        );
+    }
+
+    private int computeUnread(Long roomId, Long lastReadId) {
+        if (lastReadId == null) {
+            return (int) chatMessageRepository.countByRoom_RoomId(roomId);
+        }
+        return (int) chatMessageRepository.countByRoom_RoomIdAndMessageIdGreaterThan(roomId, lastReadId);
+        // 필요하면 createdDate 기준으로도 구현 가능
     }
 }

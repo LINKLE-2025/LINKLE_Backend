@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreateRoomRequest {
+public class CreateRoomRequestDTO {
 
     @NotNull(message = "방 타입은 필수입니다")
     private RoomType roomType;             // LIGHT or CLASS (DM은 OpenDmRequest 사용)

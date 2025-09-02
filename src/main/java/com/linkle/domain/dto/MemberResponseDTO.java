@@ -8,16 +8,16 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class MemberResponse {
+public class MemberResponseDTO {
 
     private Long userId;
     private String name;
     private String image;        // 프로필 이미지
 
-    public static MemberResponse fromEntity(ChatPart part) {
+    public static MemberResponseDTO fromEntity(ChatPart part) {
         if (part == null) return null;
         User u = part.getUser();
-        return MemberResponse.builder()
+        return MemberResponseDTO.builder()
             .userId(u.getUserId())
             .name(u.getName())
             .image(u.getImage())

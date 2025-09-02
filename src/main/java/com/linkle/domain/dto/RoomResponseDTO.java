@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RoomResponse {
+public class RoomResponseDTO {
 
     // ===== 공통 필드 =====
     private Long roomId;
@@ -41,10 +41,10 @@ public class RoomResponse {
     private String dmPartnerProfileImageUrl;
 
     // ===== 기본 변환 =====
-    public static RoomResponse fromEntity(ChatRoom r) {
+    public static RoomResponseDTO fromEntity(ChatRoom r) {
         if (r == null) return null;
 
-        RoomResponse.RoomResponseBuilder builder = RoomResponse.builder()
+        RoomResponseDTO.RoomResponseDTOBuilder builder = RoomResponseDTO.builder()
             .roomId(r.getRoomId())
             .roomType(r.getRoomType())
             .roomName(r.getRoomName());
@@ -63,7 +63,7 @@ public class RoomResponse {
     }
 
     // ===== 공용 메타데이터 추가 =====
-    private static RoomResponse withMeta(RoomResponse base,
+    private static RoomResponseDTO withMeta(RoomResponseDTO base,
         ChatMessage lastMessage,
         Integer unreadCount,
         Integer memberCount) {
@@ -80,7 +80,7 @@ public class RoomResponse {
     }
 
     // ===== 일반 방 변환 =====
-    public static RoomResponse fromEntity(ChatRoom r,
+    public static RoomResponseDTO fromEntity(ChatRoom r,
         ChatMessage lastMessage,
         Integer unreadCount,
         Integer memberCount) {
@@ -88,13 +88,13 @@ public class RoomResponse {
     }
 
     // ===== DM 전용 변환 =====
-    public static RoomResponse fromDm(ChatRoom r,
+    public static RoomResponseDTO fromDm(ChatRoom r,
         Long partnerId,
         String partnerName,
         String partnerProfileImageUrl,
         ChatMessage lastMessage,
         Integer unreadCount) {
-        RoomResponse base = fromEntity(r);
+        RoomResponseDTO base = fromEntity(r);
         if (base == null) return null;
 
         // DM 전용 필드 세팅
@@ -109,8 +109,8 @@ public class RoomResponse {
     }
 
     // ===== 리스트 변환 =====
-    public static List<RoomResponse> fromEntityList(List<ChatRoom> rooms) {
+    public static List<RoomResponseDTO> fromEntityList(List<ChatRoom> rooms) {
         if (rooms == null) return null;
-        return rooms.stream().map(RoomResponse::fromEntity).collect(Collectors.toList());
+        return rooms.stream().map(RoomResponseDTO::fromEntity).collect(Collectors.toList());
     }
 }

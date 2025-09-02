@@ -1,7 +1,7 @@
 package com.linkle.service;
 
 import com.linkle.domain.dto.MessageReadEvent;
-import com.linkle.domain.dto.ReadSyncRequest;
+import com.linkle.domain.dto.ReadSyncRequestDTO;
 import com.linkle.domain.entity.ChatPart;
 import com.linkle.repository.ChatMessageRepository;
 import com.linkle.repository.ChatPartRepository;
@@ -24,7 +24,7 @@ public class ChatReadService {
      * - 방별 내 미확인 개수 + 해당 메시지의 읽은 사람 수를 계산해 이벤트로 push
      */
     @Transactional
-    public void syncRead(ReadSyncRequest req, Long readerUserId) {
+    public void syncRead(ReadSyncRequestDTO req, Long readerUserId) {
         ChatPart part = chatPartRepository.findByRoom_RoomIdAndUser_UserId(req.getRoomId(), readerUserId)
             .orElseThrow(() -> new IllegalStateException("Not a member of room: " + req.getRoomId()));
 

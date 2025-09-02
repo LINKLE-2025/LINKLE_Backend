@@ -6,7 +6,7 @@ import lombok.*;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
-public class UpdateAlarmRequest {
+public class UpdateAlarmRequestDTO {
 
     @NotNull(message = "roomId는 필수입니다")
     private Long roomId;

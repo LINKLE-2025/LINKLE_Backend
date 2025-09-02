@@ -18,7 +18,7 @@ public class CorsFilterConfig {
 
     private List<String> allowedOrigins = new ArrayList<>();
 
-    // application-dev.properties에서 cors.allowed-origins[i]의 모든 효소들을 매핑
+    // application-dev.properties에서 cors.allowed-origins[i]의 모든 요소들을 매핑
     public void setAllowedOrigins(List<String> allowedOrigins) {
         this.allowedOrigins = allowedOrigins;
     }
@@ -26,10 +26,12 @@ public class CorsFilterConfig {
     @Bean
     public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true);
-        allowedOrigins.forEach(config::addAllowedOriginPattern);
+
+        allowedOrigins.forEach(config::addAllowedOrigin);
+
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
+        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

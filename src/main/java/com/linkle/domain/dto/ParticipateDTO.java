@@ -1,14 +1,10 @@
 package com.linkle.domain.dto;
 
-import java.time.LocalDate;
-
 import com.linkle.domain.entity.Participate;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -20,7 +16,7 @@ public class ParticipateDTO {
     private Long id;
     private Long userId;       // User FK
     private Long linkerId;     // Linker FK
-    private LocalDate participatedDate;
+    private LocalDate participatedAt;
 
     // Entity → DTO 변환
     public static ParticipateDTO fromEntity(Participate p) {
@@ -30,7 +26,7 @@ public class ParticipateDTO {
             .id(p.getId())
             .userId(p.getUser() != null ? p.getUser().getUserId() : null)
             .linkerId(p.getLinker() != null ? p.getLinker().getLinkerId() : null)
-            .participatedDate(p.getParticipatedDate())
+            .participatedAt(p.getParticipatedAt())
             .build();
 
     }

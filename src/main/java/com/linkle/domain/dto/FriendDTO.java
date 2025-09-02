@@ -2,12 +2,7 @@ package com.linkle.domain.dto;
 
 import com.linkle.domain.entity.Friend;
 import com.linkle.domain.entity.FriendState;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter

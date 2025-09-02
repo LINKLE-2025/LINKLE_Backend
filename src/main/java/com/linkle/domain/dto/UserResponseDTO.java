@@ -1,15 +1,11 @@
 package com.linkle.domain.dto;
 
+import com.linkle.domain.entity.User;
+import lombok.*;
+
 import java.time.LocalDate;
 import java.util.List;
-
-import com.linkle.domain.entity.User;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -28,7 +24,7 @@ public class UserResponseDTO {
     private String background;
     private String memo;
     private Integer accountNumber;
-    private LocalDate createdDate;
+    private LocalDate createdAt;
 
     // Entity → DTO 변환
     public static UserResponseDTO fromEntity(User user) {
@@ -43,15 +39,15 @@ public class UserResponseDTO {
             .background(user.getBackground())
             .memo(user.getMemo())
             .accountNumber(user.getAccountNumber())
-            .createdDate(user.getCreatedDate())
+            .createdAt(user.getCreatedAt())
             .build();
     }
 
     // List<Entity> → List<DTO> 변환
     public static List<UserResponseDTO> fromEntityList(List<User> users) {
-        if (users == null) return List.of(); // null 대신 빈 불변 리스트 반환
+        if (users == null) return null;
         return users.stream()
             .map(UserResponseDTO::fromEntity)
-            .toList();
+            .collect(Collectors.toList());
     }
 }

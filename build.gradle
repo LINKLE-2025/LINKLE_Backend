@@ -68,6 +68,10 @@ dependencies {
 
     //암호 복호화 사용
     implementation("org.jasypt:jasypt:1.9.3")
+
+    //Python https 통신시 필요 의존성
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.3'
 }
 
 tasks.named('test') {

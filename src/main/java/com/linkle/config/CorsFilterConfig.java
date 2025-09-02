@@ -1,6 +1,10 @@
 // src/main/java/com/shinhan/sbproject/config/CorsFilterConfig.java
 package com.linkle.config;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,23 +13,27 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 @Configuration
+@ConfigurationProperties(prefix = "cors")
 public class CorsFilterConfig {
+
+    private List<String> allowedOrigins = new ArrayList<>();
+
+    // application-dev.properties에서 cors.allowed-origins[i]의 모든 효소들을 매핑
+    public void setAllowedOrigins(List<String> allowedOrigins) {
+        this.allowedOrigins = allowedOrigins;
+    }
 
     @Bean
     public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.addAllowedOriginPattern("http://localhost:*");
-        config.addAllowedOriginPattern("http://127.0.0.1:*");
-        config.addAllowedOriginPattern("http://192.168.0.124:*");
+        allowedOrigins.forEach(config::addAllowedOriginPattern);
         config.addAllowedHeader("*");
-        config.addAllowedMethod("*"); // GET, POST, PUT, DELETE, PATCH, OPTIONS
+        config.addAllowedMethod("*");
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config); // 모든 경로
+        source.registerCorsConfiguration("/**", config);
 
-        // 팀 협업 시 CORS를 최우선으로 실행, 다른 커스텀 필터보다 먼저 처리하기 위해  FilterRegistrationBean으로 등록 후 최우선 배치
-        //--> 팀원들의 filter들과 충돌을 막기 위해
         FilterRegistrationBean<CorsFilter> bean =
             new FilterRegistrationBean<>(new CorsFilter(source));
         bean.setOrder(0);

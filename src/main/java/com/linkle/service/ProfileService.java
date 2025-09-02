@@ -4,9 +4,12 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.linkle.domain.dto.UserLinkerCountDTO;
+import com.linkle.domain.dto.UserParticipateLinkerDTO;
 import com.linkle.domain.dto.UserRequestDTO;
 import com.linkle.domain.dto.UserResponseDTO;
 import com.linkle.domain.entity.User;
+import com.linkle.repository.ParticipateRepository;
 import com.linkle.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -18,12 +21,23 @@ import org.springframework.stereotype.Service;
 public class ProfileService {
 
     private final UserRepository userRepository;
+    private final ParticipateRepository participateRepository;
 
     // 유저 조회
     public UserResponseDTO getUserProfile(Long userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
         return UserResponseDTO.fromEntity(user);
+    }
+
+    //유저 링커 참여 내역 조회
+    public List<UserParticipateLinkerDTO> getUserLineker(Long userId){
+        return participateRepository.findParticipationsByUserId(userId);
+    }
+
+    // 유저 링커 참여 통계 조회
+    public List<UserLinkerCountDTO> getUserCount(Long userId){
+        return participateRepository.countUserParticipationByCategory(userId);
     }
 
     // 유저 수정
@@ -38,6 +52,8 @@ public class ProfileService {
         userRepository.save(user);
         return UserResponseDTO.fromEntity(user);
     }
+
+
 
     // 유저 삭제
     public void deleteUserProfile(Long userId) {

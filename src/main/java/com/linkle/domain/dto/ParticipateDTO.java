@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 import com.linkle.domain.entity.Participate;
 
+import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -34,4 +35,6 @@ public class ParticipateDTO {
             .build();
 
     }
+
+
 }

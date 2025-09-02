@@ -42,7 +42,7 @@ public class Linker {
     @Column(name = "address", nullable = false)
     private String address;
 
-    @Column(name = "address_detail", nullable = false)
+    @Column(name = "address_detail", nullable = true)
     private String addressDetail;
 
     @Column(name = "location_x", nullable = false)

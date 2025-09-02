@@ -1,6 +1,7 @@
 package com.linkle.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class LinkerService {
 
     public LinkerDTO createLinker(LinkerDTO linkerDTO) {
         Linker linker = LinkerMapper.toEntity(linkerDTO);
-        linker.setCreatedDate(LocalDate.now());
+        linker.setCreatedDate(LocalDateTime.now());
         linker.setState(LinkerState.ACTIVATED);
 
         Linker savedLInker = linkerRepository.save(linker);

@@ -68,6 +68,9 @@ dependencies {
 
     //암호 복호화 사용
     implementation("org.jasypt:jasypt:1.9.3")
+
+    // MinlO 연동
+    implementation("software.amazon.awssdk:s3:2.25.+")
 }
 
 tasks.named('test') {

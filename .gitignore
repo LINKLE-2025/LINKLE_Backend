@@ -80,3 +80,4 @@ docker-compose.override.yml
 # === 캐시 / 임시 파일 ===
 .cache/
 .idea_modules/
+src/main/java/com/linkle/config/SecurityConfig.java

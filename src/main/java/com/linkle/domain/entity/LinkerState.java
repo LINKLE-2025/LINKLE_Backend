@@ -2,6 +2,6 @@
 package com.linkle.domain.entity;
 
 public enum LinkerState {
-    ACTIVE,
+    ACTIVATED,
     DELETE
 }

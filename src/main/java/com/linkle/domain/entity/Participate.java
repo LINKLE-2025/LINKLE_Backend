@@ -27,6 +27,6 @@ public class Participate {
     @JoinColumn(name = "linker_id", nullable = false)
     private Linker linker;
 
-    @Column(name = "participated_at", nullable = false)
-    private LocalDate participatedAt;
+    @Column(name = "participated_date", nullable = false)
+    private LocalDate participatedDate;
 }

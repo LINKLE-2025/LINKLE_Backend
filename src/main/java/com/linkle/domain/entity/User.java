@@ -1,9 +1,20 @@
 package com.linkle.domain.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
-
 import java.time.LocalDate;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(
@@ -37,6 +48,9 @@ public class User {
     @Column(nullable = false, unique = true)
     private String nickname;
 
+    @Column(name = "age")
+    private Integer age;
+
     @Column(nullable = false)
     private String gender;
 
@@ -49,14 +63,20 @@ public class User {
     @Column
     private String memo;
 
+    @Column(name = "bank_id")
+    private Integer bankId;
+
     @Column(name = "account_number")
     private Integer accountNumber;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDate createdAt;
+    @Column(name = "balance")
+    private  Integer balance;
+
+    @Column(name = "created_date", nullable = false)
+    private LocalDate createdDate;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDate.now();
+        this.createdDate = LocalDate.now();
     }
 }

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -81,5 +82,11 @@ public class PostService {
             RequestBody.fromInputStream(file.getInputStream(), file.getSize())
         );
         return key;
+    }
+
+    public PostDTO findById(Long postId) {
+        if (postId == null) return null;
+        Optional<Post> opt = postRepository.findById(postId);
+        return opt.map(PostDTO::fromEntity).orElse(null);
     }
 }

@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import com.linkle.domain.entity.Post;
 
 import lombok.AllArgsConstructor;
@@ -28,6 +27,8 @@ public class PostDTO {
     private Long userId;
     private Long linkerId;
 
+    private LinkerDTO linker;
+
     // Entity → DTO 변환
     public static PostDTO fromEntity(Post post) {
         if (post == null) return null;
@@ -38,13 +39,14 @@ public class PostDTO {
             .createdDate(post.getCreatedDate())
             .userId(post.getUser() != null ? post.getUser().getUserId() : null)
             .linkerId(post.getLinker() != null ? post.getLinker().getLinkerId() : null)
+            .linker(LinkerDTO.fromEntity(post.getLinker()))
             .build();
     }
 
     // List<Entity> → List<DTO> 변환
     public static List<PostDTO> fromEntityList(List<Post> posts) {
         if (posts == null) {
-            return Collections.emptyList(); // ✅ null 대신 빈 리스트 반환
+            return Collections.emptyList();
         }
         return posts.stream()
             .map(PostDTO::fromEntity)

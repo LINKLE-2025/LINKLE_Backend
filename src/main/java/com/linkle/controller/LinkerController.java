@@ -30,7 +30,6 @@ public class LinkerController {
     }
 
 
-
     @PostMapping
     public  void create(@RequestBody LinkerDTO linkerDTO,
         UriComponentsBuilder ucb){
@@ -40,8 +39,8 @@ public class LinkerController {
         log.info("상호 이름: {}", linkerDTO.getAddressName());
         log.info("주소: {}", linkerDTO.getAddress());
         log.info("주소 앞자리만: {}", linkerDTO.getAddressDetail());
-        log.info("위도(X): {}", linkerDTO.getLocationX());
-        log.info("경도(Y): {}", linkerDTO.getLocationY());
+        log.info("위도(Y): {}", linkerDTO.getLocationY());
+        log.info("경도(X): {}", linkerDTO.getLocationX());
         log.info("상태: {}", linkerDTO.getState());
         log.info("카테고리 ID: {}", linkerDTO.getCategoryId());
         log.info("생성일: {}", linkerDTO.getCreatedDate());

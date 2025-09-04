@@ -1,6 +1,7 @@
 package com.linkle.domain.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,7 +24,7 @@ public class PostDTO {
     private Long postId;
     private String image;
     private String memo;
-    private LocalDate createdDate;  // ✅ Entity와 이름 통일 (createdAt → createdDate)
+    private LocalDateTime createdDate;
     private Long userId;
     private Long linkerId;
 
@@ -34,7 +35,7 @@ public class PostDTO {
             .postId(post.getPostId())
             .image(post.getImage())
             .memo(post.getMemo())
-            .createdDate(post.getCreatedDate()) // ✅ 필드명 통일
+            .createdDate(post.getCreatedDate())
             .userId(post.getUser() != null ? post.getUser().getUserId() : null)
             .linkerId(post.getLinker() != null ? post.getLinker().getLinkerId() : null)
             .build();

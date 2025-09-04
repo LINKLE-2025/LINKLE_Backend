@@ -1,7 +1,10 @@
 package com.linkle.domain.entity;
 
+
+import java.time.LocalDateTime;
 import jakarta.persistence.*;
 import lombok.*;
+
 
 import java.time.LocalDate;
 
@@ -25,8 +28,8 @@ public class Post {
     @Column
     private String memo;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDate createdAt;
+    @Column(name = "created_date", nullable = false)
+    private LocalDateTime createdDate;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

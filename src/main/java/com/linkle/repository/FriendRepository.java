@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.linkle.domain.dto.FriendResponseDTO;
 import com.linkle.domain.entity.Friend;
 
 public interface FriendRepository extends JpaRepository<Friend, Long> {
@@ -15,7 +16,7 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     // 친구 요청 보내기
     // findById
 
-    // 친구 리스트
+    // 친구 리스트 (userId만 반환 → 그대로 둠)
     @Query(value = """
             SELECT IF(f.user_id1 = :userId, f.user_id2, f.user_id1) AS friend_id
             FROM FRIEND f
@@ -24,23 +25,23 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
         """, nativeQuery = true)
     List<Long> findAllFriendIds(@Param("userId") Long userId);
 
-    // 받은 요청 조회
+    // 받은 요청 조회 (내가 user2일 때)
     @Query(value = """
-            SELECT f.user_id2
-            FROM FRIEND f
-            WHERE f.user_id1 = :userId
-              AND f.state = 'REQUESTED'
-        """, nativeQuery = true)
-    List<Long> findReceivedFriendRequests(@Param("userId") Long userId);
-
-    // 보낸 요청 조회
-    @Query(value = """
-            SELECT f.user_id1
+            SELECT *
             FROM FRIEND f
             WHERE f.user_id2 = :userId
               AND f.state = 'REQUESTED'
         """, nativeQuery = true)
-    List<Long> findSentFriendRequests(@Param("userId") Long userId);
+    List<Friend> findReceivedFriendRequests(@Param("userId") Long userId);
+
+    // 보낸 요청 조회 (내가 user1일 때)
+    @Query(value = """
+        SELECT *
+        FROM FRIEND f
+        WHERE f.user_id1 = :userId
+          AND f.state = 'REQUESTED'
+    """, nativeQuery = true)
+    List<Friend> findSentFriendRequests(@Param("userId") Long userId);
 
     // 요청 수락(update)
     @Query(value = """
@@ -53,15 +54,38 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
 
     // 요청 거절(delete)
     @Query("""
-        SELECT f FROM Friend f
-        WHERE (f.user1.userId = :userId1 AND f.user2.userId = :userId2)
-           OR (f.user1.userId = :userId2 AND f.user2.userId = :userId1)
-    """)
+            SELECT f FROM Friend f
+            WHERE (f.user1.userId = :userId1 AND f.user2.userId = :userId2)
+               OR (f.user1.userId = :userId2 AND f.user2.userId = :userId1)
+        """)
     Optional<Friend> findFriendRelation(Long userId1, Long userId2);
 
-    // 친구 목록 조회
-    // findAllFriendIds
+    // 친구 목록 조회 (DTO로 바로 가져오기 → N+1 방지)
+    @Query("""
+            SELECT new com.linkle.domain.dto.FriendResponseDTO(
+                f.friendId,
+                f.user1.userId,
+                f.user2.userId,
+                CASE WHEN f.user1.userId = :userId THEN f.user2.name ELSE f.user1.name END,
+                CASE WHEN f.user1.userId = :userId THEN f.user2.nickname ELSE f.user1.nickname END,
+                f.state,
+                CASE WHEN f.user1.userId = :userId THEN f.user2.image ELSE f.user1.image END
+              )
+            FROM Friend f
+            WHERE (f.user1.userId = :userId OR f.user2.userId = :userId)
+            AND f.state = 'ACCEPTED'
+        """)
+    List<FriendResponseDTO> findAcceptedFriends1(@Param("userId") Long userId);
+
+    @Query("""
+        SELECT f FROM Friend f
+        WHERE (f.user1.userId = :userId OR f.user2.userId = :userId)
+          AND f.state = 'ACCEPTED'
+    """)
+    List<Friend> findAcceptedFriends(@Param("userId") Long userId);
 
     // 친구 삭제
     // deleteById
+
+    // 친구 몇명인지 조회
 }

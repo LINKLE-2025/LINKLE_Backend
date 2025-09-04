@@ -27,5 +27,5 @@ public class Friend {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private FriendState state = FriendState.ACTIVE; // 기본값 ACTIVE
+    private FriendState state = FriendState.REQUESTED; // 기본값 ACTIVE
 }

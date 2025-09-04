@@ -1,6 +1,7 @@
 package com.linkle.domain.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,14 +24,14 @@ public class LinkerDTO {
 
     private Long linkerId;
     private String name;
-    private String adressName;
+    private String addressName;
     private String address;
     private String addressDetail;
     private Double locationX;
     private Double locationY;
     private LinkerState state;
     private Long categoryId;
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
     private String memo;
 
     // Entity → DTO
@@ -41,7 +42,7 @@ public class LinkerDTO {
         return LinkerDTO.builder()
             .linkerId(linker.getLinkerId())
             .name(linker.getName())
-            .adressName(linker.getAdressName())
+            .addressName(linker.getAddressName())
             .address(linker.getAddress())
             .addressDetail(linker.getAddressDetail())
             .locationX(linker.getLocationX())
@@ -65,18 +66,18 @@ public class LinkerDTO {
 
     // DTO → Entity (필요시 추가)
     public Linker toEntity() {
-        return Linker.builder()
-            .linkerId(linkerId)
-            .name(name)
-            .adressName(adressName)
-            .address(address)
-            .addressDetail(addressDetail)
-            .locationX(locationX)
-            .locationY(locationY)
-            .state(state)
-            .categoryId(categoryId)
-            .createdDate(createdDate)
-            .memo(memo)
-            .build();
+        Linker linker = new Linker();
+        linker.setLinkerId(this.linkerId);
+        linker.setName(this.name);
+        linker.setAddressName(this.addressName);
+        linker.setAddress(this.address);
+        linker.setAddressDetail(this.addressDetail);
+        linker.setLocationX(this.locationX);
+        linker.setLocationY(this.locationY);
+        linker.setState(this.state);
+        linker.setCategoryId(this.categoryId);
+        linker.setCreatedDate(this.createdDate);
+        linker.setMemo(this.memo);
+        return linker;
     }
 }

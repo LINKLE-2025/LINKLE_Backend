@@ -37,5 +37,5 @@ public class ChatPart {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "alarm", nullable = false)
-    private Alarm alarm = Alarm.ACTIVE;
+    private Alarm alarm = Alarm.ON;
 }

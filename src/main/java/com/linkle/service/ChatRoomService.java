@@ -55,7 +55,7 @@ public class ChatRoomService {
             .id(new ChatPartId(saved.getRoomId(), ownerUserId))
             .room(saved)
             .user(userRepository.getReferenceById(ownerUserId))
-            .alarm(Alarm.ACTIVE)
+            .alarm(Alarm.ON)
             .build();
         chatPartRepository.save(ownerPart);
 
@@ -105,13 +105,13 @@ public class ChatRoomService {
                 .id(new ChatPartId(dmRoom.getRoomId(), meId))
                 .room(dmRoom)
                 .user(userRepository.getReferenceById(meId))
-                .alarm(Alarm.ACTIVE)
+                .alarm(Alarm.ON)
                 .build();
             ChatPart partnerPart = ChatPart.builder()
                 .id(new ChatPartId(dmRoom.getRoomId(), targetId))
                 .room(dmRoom)
                 .user(userRepository.getReferenceById(targetId))
-                .alarm(Alarm.ACTIVE)
+                .alarm(Alarm.ON)
                 .build();
             chatPartRepository.saveAll(List.of(mePart, partnerPart));
         }

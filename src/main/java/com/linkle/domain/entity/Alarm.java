@@ -2,6 +2,6 @@ package com.linkle.domain.entity;
 
 public enum Alarm 
 {
-    ACTIVE,  // 활성화
-    MUTE     // 알람차단
+    ON,  // 활성화
+    OFF     // 알람차단
 }

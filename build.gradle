@@ -69,6 +69,11 @@ dependencies {
     //암호 복호화 사용
     implementation("org.jasypt:jasypt:1.9.3")
 
+    //채팅 웹소켓
+    implementation "org.springframework.boot:spring-boot-starter-web"
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework:spring-messaging'
+
     // MinlO 연동
     implementation("software.amazon.awssdk:s3:2.25.+")
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +24,12 @@ import lombok.extern.slf4j.Slf4j;
 public class LinkerController {
     private final LinkerService linkerService;
 
+    @GetMapping("/{id}")
+    public LinkerDTO linkerDetail(@PathVariable("id") Long linkerId){
+        return  linkerService.linkerDetail(linkerId);
+    }
+
+
     @PostMapping
     public  void create(@RequestBody LinkerDTO linkerDTO,
         UriComponentsBuilder ucb){
@@ -32,8 +39,8 @@ public class LinkerController {
         log.info("상호 이름: {}", linkerDTO.getAddressName());
         log.info("주소: {}", linkerDTO.getAddress());
         log.info("주소 앞자리만: {}", linkerDTO.getAddressDetail());
-        log.info("위도(X): {}", linkerDTO.getLocationX());
-        log.info("경도(Y): {}", linkerDTO.getLocationY());
+        log.info("위도(Y): {}", linkerDTO.getLocationY());
+        log.info("경도(X): {}", linkerDTO.getLocationX());
         log.info("상태: {}", linkerDTO.getState());
         log.info("카테고리 ID: {}", linkerDTO.getCategoryId());
         log.info("생성일: {}", linkerDTO.getCreatedDate());

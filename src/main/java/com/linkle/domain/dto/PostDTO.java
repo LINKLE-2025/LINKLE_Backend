@@ -4,6 +4,8 @@ import com.linkle.domain.entity.Post;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,7 +19,7 @@ public class PostDTO {
     private Long postId;
     private String image;
     private String memo;
-    private LocalDate createdAt;
+    private LocalDateTime createdDate;
     private Long userId;
     private Long linkerId;
 
@@ -28,7 +30,7 @@ public class PostDTO {
             .postId(post.getPostId())
             .image(post.getImage())
             .memo(post.getMemo())
-            .createdAt(post.getCreatedAt())
+            .createdDate(post.getCreatedDate())
             .userId(post.getUser() != null ? post.getUser().getUserId() : null)
             .linkerId(post.getLinker() != null ? post.getLinker().getLinkerId() : null)
             .build();

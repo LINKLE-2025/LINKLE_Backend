@@ -40,60 +40,56 @@ public class ChatMessageService {
         ChatRoom room = chatRoomRepository.findById(req.getRoomId())
             .orElseThrow(() -> new EntityNotFoundException("Room not found: " + req.getRoomId()));
 
-        // 방 멤버인지 검증
         chatPartRepository.findByRoom_RoomIdAndUser_UserId(room.getRoomId(), senderUserId)
             .orElseThrow(() -> new IllegalStateException("Not a member of room: " + room.getRoomId()));
 
-        // 내용/타입
-        String content = Optional.ofNullable(req.getContent())
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .orElseThrow(() -> new IllegalArgumentException("메시지 내용이 비어있습니다."));
-        MessageType type = req.getMessageType() == null ? MessageType.TEXT : req.getMessageType();
+        MessageType type = (req.getMessageType() == null) ? MessageType.TEXT : req.getMessageType();
 
-        // 보낸 사람(User) 로딩 (TEXT 기준). SYSTEM이면 null 허용하려면 엔티티 nullable=true 필요
-        User sender = (type == MessageType.SYSTEM) ? null : userRepository.getReferenceById(senderUserId);
+        // ✅ 프록시로 User 채우기 (엔티티 필드는 userId 유지)
+        User sender = userRepository.getReferenceById(senderUserId);
 
-        // 저장
+        // ✅ text만 사용
+        String body = req.ensuredText();
+
         ChatMessage saved = chatMessageRepository.save(
             ChatMessage.builder()
                 .room(room)
-                .userId(sender)
+                .userId(sender)        // 필드명 userId 유지
                 .type(type)
-                .text(content)
+                .text(body)            // DB에도 text
                 .build()
         );
 
-        // 이벤트/응답에 보낼 보낸 사람 요약
-        Long senderId = (saved.getUserId() != null) ? saved.getUserId().getUserId() : null;
-        String senderName = (saved.getUserId() != null) ? saved.getUserId().getNickname() : null;
-        String senderImage = (saved.getUserId() != null) ? saved.getUserId().getImage() : null;
+        Long sid = saved.getUserId().getUserId();
+        String sname = saved.getUserId().getNickname();
+        String simg = saved.getUserId().getImage();
 
-        // 브로드캐스트
+        // 브로드캐스트 이벤트도 text
         MessageCreatedEvent event = MessageCreatedEvent.builder()
             .messageId(saved.getMessageId())
             .roomId(room.getRoomId())
             .messageType(saved.getType())
             .text(saved.getText())
             .createdDate(saved.getCreatedDate())
-            .senderId(senderId)
-            .senderName(senderName)
-            .senderImage(senderImage)
+            .senderId(sid)
+            .senderName(sname)
+            .senderImage(simg)
             .build();
         eventProducer.messageCreated(event);
 
-        // 클라이언트 응답
+        // REST 응답도 text로 맞출 거면 .text(...) 사용
         return MessageResponseDTO.builder()
             .messageId(saved.getMessageId())
             .roomId(room.getRoomId())
             .messageType(saved.getType())
-            .content(saved.getText())
+            .text(saved.getText())        // ← content 말고 text로 통일
             .createdDate(saved.getCreatedDate())
-            .senderId(senderId)
-            .senderName(senderName)
-            .senderImage(senderImage)
+            .senderId(sid)
+            .senderName(sname)
+            .senderImage(simg)
             .build();
     }
+
 
     /**
      * 메시지 목록 조회 (최신 → 과거, beforeId 커서)
@@ -114,7 +110,7 @@ public class ChatMessageService {
                     .messageId(m.getMessageId())
                     .roomId(m.getRoom().getRoomId())
                     .messageType(m.getType())
-                    .content(m.getText())
+                    .text(m.getText())
                     .createdDate(m.getCreatedDate())
                     .senderId(su != null ? su.getUserId() : null)
                     .senderName(su != null ? su.getNickname() : null)

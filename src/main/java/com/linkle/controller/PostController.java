@@ -1,6 +1,7 @@
 package com.linkle.controller;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,15 @@ public class PostController {
 
     private final PostService postService;
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE) 
+    @GetMapping
+    public List<PostDTO> selectPost(@RequestParam("linkerId")  Long linkerId) {
+        List<PostDTO> postList = postService.findByLinkerLinkerId(linkerId);
+        return postList;
+    }
+
+
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PostDTO> createPost(
         @RequestParam("linkerId") Long linkerId,
         @RequestParam("content") String content,

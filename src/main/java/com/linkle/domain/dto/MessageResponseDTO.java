@@ -24,7 +24,7 @@ public class MessageResponseDTO {
     private Long messageId;
     private Long roomId;
     private MessageType messageType;    // TEXT / SYSTEM ...
-    private String content;
+    private String text;
     private Instant createdDate;
 
     // ===== 보낸 사람 (SYSTEM이면 null 가능) =====
@@ -45,7 +45,7 @@ public class MessageResponseDTO {
             .messageId(msg.getMessageId())
             .roomId(msg.getRoom().getRoomId())
             .messageType(msg.getType())
-            .content(msg.getText())                 //
+            .text(msg.getText())                 //
             .createdDate(msg.getCreatedDate());     //
 
         // sender가 있을 때만 채움 (SYSTEM 메시지는 null일 수 있음)

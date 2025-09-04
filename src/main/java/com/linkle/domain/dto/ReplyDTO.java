@@ -1,17 +1,11 @@
 package com.linkle.domain.dto;
 
+import com.linkle.domain.entity.Reply;
+import lombok.*;
+
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.linkle.domain.entity.Reply;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
 @Setter
@@ -22,7 +16,7 @@ public class ReplyDTO {
 
     private Long replyId;
     private String content;
-    private LocalDate createdDate;
+    private LocalDate createdAt;
     private Long userId;
     private Long boardId;
 
@@ -32,7 +26,7 @@ public class ReplyDTO {
         return ReplyDTO.builder()
             .replyId(reply.getReplyId())
             .content(reply.getContent())
-            .createdDate(reply.getCreatedDate())
+            .createdAt(reply.getCreatedAt())
             .userId(reply.getUser() != null ? reply.getUser().getUserId() : null)
             .boardId(reply.getBoard() != null ? reply.getBoard().getBoardId() : null)
             .build();
@@ -40,9 +34,7 @@ public class ReplyDTO {
 
     // List<Entity> → List<DTO> 변환
     public static List<ReplyDTO> fromEntityList(List<Reply> replies) {
-        if (replies == null) {
-            return Collections.emptyList();
-        }
+        if (replies == null) return null;
         return replies.stream()
             .map(ReplyDTO::fromEntity)
             .collect(Collectors.toList());

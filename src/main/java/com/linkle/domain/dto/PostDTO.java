@@ -1,18 +1,13 @@
 package com.linkle.domain.dto;
 
+import com.linkle.domain.entity.Post;
+import lombok.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.linkle.domain.entity.Post;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
 @Setter
@@ -43,9 +38,7 @@ public class PostDTO {
 
     // List<Entity> → List<DTO> 변환
     public static List<PostDTO> fromEntityList(List<Post> posts) {
-        if (posts == null) {
-            return Collections.emptyList(); // ✅ null 대신 빈 리스트 반환
-        }
+        if (posts == null) return null;
         return posts.stream()
             .map(PostDTO::fromEntity)
             .collect(Collectors.toList());

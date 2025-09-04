@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.linkle.domain.dto.FriendDTO;
+import com.linkle.domain.dto.FriendResponseDTO;
 import com.linkle.domain.entity.Friend;
 import com.linkle.domain.entity.FriendState;
 import com.linkle.domain.entity.User;
@@ -36,12 +37,12 @@ public class FriendService {
     }
 
     // 받은 요청 조회
-    public List<Long> getReceivedRequests(Long userId) {
+    public List<Friend> getReceivedRequests(Long userId) {
         return friendRepository.findReceivedFriendRequests(userId);
     }
 
     // 보낸 요청 조회
-    public List<Long> getSentRequests(Long userId) {
+    public List<Friend> getSentRequests(Long userId) {
         return friendRepository.findSentFriendRequests(userId);
     }
 
@@ -72,7 +73,15 @@ public class FriendService {
         return friendRepository.findAllFriendIds(userId);
     }
 
+    // 친구 목록 조회 (Friend 엔티티 그대로 반환)
+    // public List<FriendResponseDTO> getFriendEntities(Long userId) { return friendRepository.findAcceptedFriends(userId); }
 
+    public List<FriendResponseDTO> getFriendEntities(Long userId) {
+        return friendRepository.findAcceptedFriends(userId)
+            .stream()
+            .map(friend -> FriendResponseDTO.fromEntity(friend, userId))
+            .toList();
+    }
     // 친구 삭제
     public void deleteFriend(Long friendId){
         friendRepository.deleteById(friendId);

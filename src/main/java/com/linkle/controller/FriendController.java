@@ -14,15 +14,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.linkle.domain.dto.FriendDTO;
-import com.linkle.domain.dto.UserResponseDTO;
-import com.linkle.domain.entity.User;
+import com.linkle.domain.dto.FriendResponseDTO;
+import com.linkle.domain.entity.Friend;
 import com.linkle.repository.UserRepository;
 import com.linkle.service.FriendService;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/friend")
+@RequestMapping("/api/friend")
 @RequiredArgsConstructor
 public class FriendController {
 
@@ -37,26 +37,22 @@ public class FriendController {
 
     // 받은 요청 조회
     @GetMapping("/received")
-    public List<UserResponseDTO> getReceivedRequests(@RequestParam("user_id2") Long userId) {
-        List<Long> friend = friendService.getReceivedRequests(userId);
-        List<UserResponseDTO> data = new ArrayList<>();
-        for (Long usersId : friend) {
-            User user = userRepository.findById(usersId)
-                .orElseThrow(() -> new RuntimeException("유저 없음"));
-            data.add(UserResponseDTO.fromEntity(user));
+    public List<FriendResponseDTO> getReceivedRequests(@RequestParam("user_id2") Long userId) {
+        List<Friend> friends = friendService.getReceivedRequests(userId);
+        List<FriendResponseDTO> data = new ArrayList<>();
+        for (Friend friend : friends) {
+            data.add(FriendResponseDTO.fromEntity(friend, userId));
         }
         return data;
     }
 
     // 보낸 요청 조회
     @GetMapping("/sent")
-    public List<UserResponseDTO> getSentRequests(@RequestParam("user_id1") Long userId) {
-        List<Long> friend = friendService.getSentRequests(userId);
-        List<UserResponseDTO> data = new ArrayList<>();
-        for (Long usersId : friend) {
-            User user = userRepository.findById(usersId)
-                .orElseThrow(() -> new RuntimeException("유저 없음"));
-            data.add(UserResponseDTO.fromEntity(user));
+    public List<FriendResponseDTO> getSentRequests(@RequestParam("user_id1") Long userId) {
+        List<Friend> friends = friendService.getSentRequests(userId);
+        List<FriendResponseDTO> data = new ArrayList<>();
+        for (Friend friend : friends) {
+            data.add(FriendResponseDTO.fromEntity(friend, userId));
         }
         return data;
     }
@@ -73,22 +69,15 @@ public class FriendController {
         friendService.refusalFriend(dto);
     }
 
-    // 친구 목록 조회
+    // 친구 목록 조회 단순화(fetch join 구조)
     @GetMapping("/{userId}")
-    public List<UserResponseDTO> getFriendList(@PathVariable Long userId) {
-        List<Long> friend = friendService.getFriendList(userId);
-        List<UserResponseDTO> data = new ArrayList<>();
-        for (Long usersId : friend) {
-            User user = userRepository.findById(usersId)
-                .orElseThrow(() -> new RuntimeException("유저 없음"));
-            data.add(UserResponseDTO.fromEntity(user));
-        }
-        return data;
+    public List<FriendResponseDTO> getFriendList(@PathVariable Long userId) {
+        return friendService.getFriendEntities(userId);
     }
 
     // 친구 삭제
     @DeleteMapping("/{friendId}")
-    public void deleteFriend(@PathVariable Long friendId){
+    public void deleteFriend(@PathVariable Long friendId) {
         friendService.deleteFriend(friendId);
     }
 

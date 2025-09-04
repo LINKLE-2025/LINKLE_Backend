@@ -2,6 +2,8 @@ package com.linkle.service;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +36,15 @@ public class PostService {
     // minio 저장소 활용
     @Value("${minio.bucket}")
     private String bucketName;
+
+
+    public List<PostDTO> findByLinkerLinkerId(Long linkerId){
+        if (linkerId == null) {
+            return Collections.emptyList(); // Return empty list for null linkerId
+        }
+        List<Post> posts = postRepository.findByLinkerLinkerId(linkerId);
+        return PostDTO.fromEntityList(posts);
+    }
 
 
     public PostDTO createPost(PostDTO dto, MultipartFile imageFile) throws IOException {

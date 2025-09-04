@@ -1,5 +1,7 @@
 package com.linkle.domain.dto;
 
+import java.util.Optional;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -7,18 +9,27 @@ import lombok.*;
 
 import com.linkle.domain.entity.MessageType; // TEXT / SYSTEM 등
 
-@Getter @Builder
-@NoArgsConstructor @AllArgsConstructor
+ import com.fasterxml.jackson.annotation.JsonAlias;
+ import com.fasterxml.jackson.annotation.JsonIgnore;
+
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor @Builder
 public class SendMessageRequestDTO {
 
     @NotNull
     private Long roomId;
 
-    @NotNull
-    private MessageType messageType; // 보통 TEXT 고정, 시스템은 서버에서만 생성
+    private MessageType messageType;   // TEXT 기본
 
-    @NotBlank
-    @Size(max = 2000)
-    private String content;
+    @JsonAlias({"text", "content"})    // ← text/ content 둘 다 허용
+    private String text;
 
+    @JsonIgnore
+    public String ensuredText() {
+        return Optional.ofNullable(text)
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .orElseThrow(() -> new IllegalArgumentException("메시지 내용이 비어있습니다."));
+    }
 }
+

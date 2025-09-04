@@ -1,23 +1,13 @@
 package com.linkle.controller;
 
-import com.linkle.domain.dto.CreateRoomRequestDTO;
-import com.linkle.domain.dto.MemberResponseDTO;
-import com.linkle.domain.dto.MessageResponseDTO;
-import com.linkle.domain.dto.OpenDmRequestDTO;
-import com.linkle.domain.dto.ReadSyncRequestDTO;
-import com.linkle.domain.dto.RoomResponseDTO;
-import com.linkle.domain.dto.UnreadCountResponseDTO;
+import com.linkle.domain.dto.*;
 import com.linkle.domain.entity.ChatPart;
 import com.linkle.repository.ChatMessageRepository;
 import com.linkle.repository.ChatPartRepository;
-import com.linkle.service.ChatMessageService;
-import com.linkle.service.ChatReadService;
-import com.linkle.service.ChatRoomService;
-import com.linkle.service.UnreadService;
+import com.linkle.service.*;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,50 +23,48 @@ public class ChatRoomController {
     private final ChatReadService chatReadService;
     private final UnreadService unreadService;
 
-    // (멤버 목록만 N+1 방지용 fetch join 필요해서 Repository 직접 사용)
     private final ChatPartRepository chatPartRepository;
     private final ChatMessageRepository chatMessageRepository;
 
     /** 그룹/클래스 방 생성 */
     @PostMapping("/room")
-    public RoomResponseDTO createRoom(@Valid @RequestBody CreateRoomRequestDTO req) {
-        Long me = currentUserId();
-        return chatRoomService.createRoom(req, me);
+    public RoomResponseDTO createRoom(@Valid @RequestBody CreateRoomRequestDTO body,
+        HttpServletRequest req) {
+        Long me = currentUserId(req);
+        return chatRoomService.createRoom(body, me);
     }
 
-    /** 1:1 DM 열기/조회 (서비스에 openDm 구현되어 있다고 가정) */
+    /** 1:1 DM 열기/조회 */
     @PostMapping("/room/dm")
-    public RoomResponseDTO openDm(@Valid @RequestBody OpenDmRequestDTO req) {
-        Long me = currentUserId();
-        // ChatRoomService에 openDm(OpenDmRequest, meId) 메서드가 있어야 합니다.
-        return chatRoomService.openDm(req, me);
+    public RoomResponseDTO openDm(@Valid @RequestBody OpenDmRequestDTO body,
+        HttpServletRequest req) {
+        Long me = currentUserId(req);
+        return chatRoomService.openDm(body, me);
     }
 
-    /** 방 단건 조회 (+ 최신 메시지 프리뷰/미확인/멤버수 메타 포함) */
+    /** 방 단건 조회 */
     @GetMapping("/room/{roomId}")
-    public RoomResponseDTO getRoom(@PathVariable Long roomId) {
-        Long me = currentUserId();
+    public RoomResponseDTO getRoom(@PathVariable Long roomId,
+        HttpServletRequest req) {
+        Long me = currentUserId(req);
         return chatRoomService.getRoomWithMeta(roomId, me);
     }
 
     /** 내가 참여 중인 방 목록 */
     @GetMapping("/room")
-    public List<RoomResponseDTO> myRooms() {
-        Long me = currentUserId();
+    public List<RoomResponseDTO> myRooms(HttpServletRequest req) {
+        Long me = currentUserId(req);
         return chatRoomService.listMyRooms(me);
     }
 
     /** 특정 방의 멤버 목록 */
     @GetMapping("/room/{roomId}/members")
     public List<MemberResponseDTO> roomMembers(@PathVariable Long roomId) {
-        // N+1 방지용 fetch join 메서드 사용
         List<ChatPart> parts = chatPartRepository.findActiveByRoomIdWithUser(roomId);
-        return parts.stream()
-            .map(MemberResponseDTO::fromEntity)
-            .toList();
+        return parts.stream().map(MemberResponseDTO::fromEntity).toList();
     }
 
-    /** 특정 방의 메시지 목록 (최신부터, 커서 beforeId로 더 불러오기) */
+    /** 특정 방의 메시지 목록 */
     @GetMapping("/room/{roomId}/messages")
     public List<MessageResponseDTO> roomMessages(@PathVariable Long roomId,
         @RequestParam(required = false) Long beforeId,
@@ -86,27 +74,28 @@ public class ChatRoomController {
 
     /** 읽음 동기화 */
     @PostMapping("/read")
-    public void syncRead(@Valid @RequestBody ReadSyncRequestDTO req) {
-        Long me = currentUserId();
-        chatReadService.syncRead(req, me);
+    public void syncRead(@Valid @RequestBody ReadSyncRequestDTO body,
+        HttpServletRequest req) {
+        Long me = currentUserId(req);
+        chatReadService.syncRead(body, me);
     }
 
     /** 내 전체/방별 미확인 수 요약 */
     @GetMapping("/unread")
-    public UnreadCountResponseDTO unreadSummary() {
-        Long me = currentUserId();
+    public UnreadCountResponseDTO unreadSummary(HttpServletRequest req) {
+        Long me = currentUserId(req);
         return unreadService.unreadSummary(me);
     }
 
-    // ----------------- helpers -----------------
-    private Long currentUserId() {
-        // 프로젝트의 보안 구성에 맞게 교체하세요.
-        // 예: JWT subject가 숫자 userId면 그대로 파싱, 아니면 CustomPrincipal에서 꺼내기
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    // ----------------- helper -----------------
+    private Long currentUserId(HttpServletRequest req) {
+        String h = req.getHeader("x-user-id");
+        if (h != null && !h.isBlank()) return Long.parseLong(h);
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName() != null) {
-            try { return Long.parseLong(auth.getName()); } catch (NumberFormatException ignore) {}
+            try { return Long.parseLong(auth.getName()); } catch (Exception ignore) {}
         }
-        // 데모/개발용 fallback
-        return 1L;
+        return 1L; // 개발용 기본값
     }
 }

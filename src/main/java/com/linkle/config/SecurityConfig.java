@@ -39,9 +39,11 @@ public class SecurityConfig {
             "http://localhost:*",
             "http://127.0.0.1:*",
             "http://192.168.0.129:*",   // ✅ 실제 프론트엔드 개발 IP
+            "http://192.168.0.128:*",   // ✅ 실제 프론트엔드 개발 IP
             "https://localhost:*",
             "https://127.0.0.1:*",
-            "https://192.168.0.129:*"   // ✅ HTTPS도 허용 (백엔드 SSL일 경우)
+            "https://192.168.0.129:*",   // ✅ HTTPS도 허용 (백엔드 SSL일 경우)
+            "https://192.168.0.128:*"   // ✅ HTTPS도 허용 (백엔드 SSL일 경우)
         ));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

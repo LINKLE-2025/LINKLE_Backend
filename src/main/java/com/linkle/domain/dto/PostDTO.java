@@ -44,7 +44,7 @@ public class PostDTO {
     // List<Entity> → List<DTO> 변환
     public static List<PostDTO> fromEntityList(List<Post> posts) {
         if (posts == null) {
-            return Collections.emptyList();
+            return Collections.emptyList(); // ✅ null 대신 빈 리스트 반환
         }
         return posts.stream()
             .map(PostDTO::fromEntity)

@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.linkle.domain.dto.UserLinkerCountDTO;
-import com.linkle.domain.dto.UserParticipateLinkerDTO;
+import com.linkle.domain.dto.ProfileLinkerCountDTO;
+import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
 import com.linkle.domain.entity.Participate;
 
 public interface ParticipateRepository extends JpaRepository<Participate, Long> {
@@ -21,7 +21,7 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
             JOIN p.linker l
             WHERE p.user.userId = :userId
         """)
-    List<UserParticipateLinkerDTO> findParticipationsByUserId(@Param("userId") Long userId);
+    List<ProfileParticipateLinkerDTO> findParticipationsByUserId(@Param("userId") Long userId);
 
     // 링커 참여 통계 조회
     @Query("""
@@ -34,6 +34,6 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
         GROUP BY l.categoryId
         ORDER BY COUNT(p) DESC
        """)
-    List<UserLinkerCountDTO> countUserParticipationByCategory(@Param("userId") Long userId);
+    List<ProfileLinkerCountDTO> countUserParticipationByCategory(@Param("userId") Long userId);
 
 }

@@ -9,7 +9,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class UserParticipateLinkerDTO {
+public class ProfileParticipateLinkerDTO {
     private Long linkerId;
     private String name;
     private LinkerState state;

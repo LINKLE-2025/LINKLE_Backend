@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.linkle.domain.dto.PostDTO;
 import com.linkle.service.PostService;
+import com.linkle.service.ProfileService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,15 +22,18 @@ import lombok.extern.slf4j.Slf4j;
 public class PostController {
 
     private final PostService postService;
+    private final ProfileService profileService;
 
-    @GetMapping
-    public List<PostDTO> selectPost(@RequestParam("linkerId")  Long linkerId) {
+    @GetMapping("/{postId}")
+    public PostDTO getPost(@PathVariable Long postId) {
+        return postService.findById(postId);
+    }
+
+    @GetMapping(params = "linkerId")
+    public List<PostDTO> selectPostList(@RequestParam("linkerId")  Long linkerId) {
         List<PostDTO> postList = postService.findByLinkerLinkerId(linkerId);
         return postList;
     }
-
-
-
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PostDTO> createPost(
         @RequestParam("linkerId") Long linkerId,
@@ -50,4 +54,28 @@ public class PostController {
         PostDTO created = postService.createPost(dto, file);
         return ResponseEntity.ok(created);
     }
+
+    private MediaType resolveMediaType(String key) {
+        if (key != null && key.endsWith(".png")) {
+            return MediaType.IMAGE_PNG;
+        } else if (key != null && (key.endsWith(".jpg") || key.endsWith(".jpeg"))) {
+            return MediaType.IMAGE_JPEG;
+        } else {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+    }
+
+        @GetMapping("/{postId}/image")
+        public ResponseEntity<byte[]> viewPostImage(@PathVariable Long postId) throws IOException {
+            PostDTO dto = postService.findById(postId);
+            if (dto == null || dto.getImage() == null) {
+                return ResponseEntity.notFound().build();
+            }
+            String key = dto.getImage();                 // 외부 저장 키 (예: minio/s3 key)
+            byte[] data = profileService.downloadFile(key);
+
+            return ResponseEntity.ok()
+                .contentType(resolveMediaType(key))
+                .body(data);
+        }
 }

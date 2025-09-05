@@ -14,7 +14,7 @@ import com.linkle.domain.entity.Participate;
 public interface ParticipateRepository extends JpaRepository<Participate, Long> {
     // 링커 참여 리스트 조회
     @Query("""
-            SELECT new com.linkle.domain.dto.UserParticipateLinkerDTO(
+            SELECT new com.linkle.domain.dto.ProfileParticipateLinkerDTO(
                 l.linkerId, l.name, l.state, l.memo, p.participatedDate
             )
             FROM Participate p
@@ -25,7 +25,7 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
 
     // 링커 참여 통계 조회
     @Query("""
-        SELECT new com.linkle.domain.dto.UserLinkerCountDTO(
+        SELECT new com.linkle.domain.dto.ProfileLinkerCountDTO(
             l.categoryId, COUNT(p)
         )
         FROM Participate p

@@ -113,7 +113,7 @@ public class ChatMessageService {
                     .text(m.getText())
                     .createdDate(m.getCreatedDate())
                     .senderId(su != null ? su.getUserId() : null)
-                    .senderName(su != null ? su.getNickname() : null)
+                    .senderName(su != null ? su.getName() : null)
                     .senderImage(su != null ? su.getImage() : null)
                     .build();
             })

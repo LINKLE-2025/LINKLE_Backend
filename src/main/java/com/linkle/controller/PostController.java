@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.linkle.domain.dto.PostDTO;
+import com.linkle.domain.dto.ProfilePostDTO;
+import com.linkle.domain.entity.Post;
 import com.linkle.service.PostService;
 import com.linkle.service.ProfileService;
 
@@ -78,4 +80,10 @@ public class PostController {
                 .contentType(resolveMediaType(key))
                 .body(data);
         }
+
+    // 유저 포스트 조회
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<ProfilePostDTO>> getUserPosts(@PathVariable Long userId) {
+        return ResponseEntity.ok(profileService.getProfilePost(userId));
+    }
 }

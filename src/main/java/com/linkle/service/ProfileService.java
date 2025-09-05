@@ -5,12 +5,17 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.linkle.domain.dto.LinkerDTO;
+import com.linkle.domain.dto.PostDTO;
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
 import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
 import com.linkle.domain.dto.ProfileEditRequestDTO;
 import com.linkle.domain.dto.ProfileEditResponseDTO;
+import com.linkle.domain.dto.ProfilePostDTO;
+import com.linkle.domain.entity.Post;
 import com.linkle.domain.entity.User;
 import com.linkle.repository.ParticipateRepository;
+import com.linkle.repository.PostRepository;
 import com.linkle.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -33,7 +38,7 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final ParticipateRepository participateRepository;
     private final S3Client s3Client;
-
+    private final PostRepository postRepository;
     // minio 저장소 활용
     @Value("${minio.bucket}")
     private String bucketName;
@@ -54,6 +59,21 @@ public class ProfileService {
     public List<ProfileLinkerCountDTO> getUserCount(Long userId) {
         return participateRepository.countUserParticipationByCategory(userId);
     }
+
+    // 유저 포스트 조회
+    public List<ProfilePostDTO> getProfilePost(Long userId) {
+        return postRepository.findByUserUserIdOrderByCreatedDateDesc(userId)
+            .stream()
+            .map(post -> new ProfilePostDTO(
+                post.getPostId(),
+                post.getImage(),
+                post.getMemo(),
+                post.getCreatedDate(),
+                post.getUser().getUserId()
+            ))
+            .toList();
+    }
+
 
     // 유저 수정
     public ProfileEditResponseDTO updateUserProfile(Long userId, ProfileEditRequestDTO dto) {

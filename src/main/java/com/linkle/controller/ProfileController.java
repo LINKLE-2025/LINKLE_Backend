@@ -3,11 +3,13 @@ package com.linkle.controller;
 import java.io.IOException;
 import java.util.List;
 
+import com.linkle.domain.dto.PostDTO;
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
 import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
 import com.linkle.domain.dto.ProfileEditRequestDTO;
 import com.linkle.domain.dto.ProfileEditResponseDTO;
 
+import com.linkle.domain.entity.Post;
 import com.linkle.service.ProfileService;
 
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,8 @@ public class ProfileController {
     public ResponseEntity<List<ProfileLinkerCountDTO>> getUserCount(@RequestBody ProfileEditResponseDTO res) {
         return ResponseEntity.ok(profileService.getUserCount(res.getUserId()));
     }
+
+
 
     // 유저 수정
     // MediaType은 기본 제공되는 파일 타입들이 존재

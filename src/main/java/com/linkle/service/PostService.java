@@ -1,7 +1,6 @@
 package com.linkle.service;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +19,7 @@ import com.linkle.repository.PostRepository;
 import com.linkle.domain.entity.User;
 import com.linkle.repository.UserRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -37,6 +37,8 @@ public class PostService {
     // minio 저장소 활용
     @Value("${minio.bucket}")
     private String bucketName;
+    
+    
 
 
     public List<PostDTO> findByLinkerLinkerId(Long linkerId){
@@ -89,4 +91,36 @@ public class PostService {
         Optional<Post> opt = postRepository.findById(postId);
         return opt.map(PostDTO::fromEntity).orElse(null);
     }
+
+    public Long  deletePost(Long postId) {
+        postRepository.deleteById(postId);
+
+        Long result = postRepository.findById(postId).stream().count();
+
+        return result;
+    }
+
+
+    @Transactional
+    public Long updatePost(Long postId, String content, MultipartFile file) throws IOException {
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new RuntimeException("Post가 없습니다"));
+
+        // 텍스트(memo) 업데이트
+        if (content != null && !content.trim().isEmpty()) {
+            post.setMemo(content);
+        }
+
+        // 이미지 업데이트
+        if (file != null && !file.isEmpty()) {
+            String imageUrl = uploadPostImage(file, postId); // postId로 저장 경로 구분
+            post.setImage(imageUrl);
+        }
+
+        // JPA는 엔티티 변경사항을 자동 감지 → save() 생략해도 됨
+        postRepository.save(post);
+
+        return post.getPostId();
+    }
+
 }

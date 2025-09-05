@@ -74,18 +74,23 @@ public class ChatRoomService {
         if (Objects.equals(meId, targetId)) {
             throw new IllegalArgumentException("자기 자신과의 DM은 생성할 수 없습니다.");
         }
-        // 상대 존재 확인
+
+        User me = userRepository.findById(meId)
+            .orElseThrow(() -> new EntityNotFoundException("Current user not found: " + meId));
+
         User partner = userRepository.findById(targetId)
             .orElseThrow(() -> new EntityNotFoundException("Target user not found: " + targetId));
 
-        // 1) 재사용 후보: 내가 참여 중인 방 중 DM만
+        // 2) 내가 참여 중인 DM 중에 상대가 포함된 방 재사용
         List<ChatRoom> myRooms = chatRoomRepository.findActiveRoomsByUserId(meId);
         Optional<ChatRoom> existingDm = myRooms.stream()
             .filter(r -> r.getRoomType() == RoomType.DM)
             .filter(r -> {
-                // 해당 방의 활성 멤버들 중 target이 있는지 확인
-                return chatPartRepository.findByRoom_RoomIdAndLeftDateIsNull(r.getRoomId()).stream()
-                    .anyMatch(cp -> cp.getUser().getUserId().equals(targetId));
+                // null 방지: 빈 리스트 보장
+                List<ChatPart> parts = Optional.ofNullable(
+                    chatPartRepository.findByRoom_RoomIdAndLeftDateIsNull(r.getRoomId())
+                ).orElseGet(List::of);
+                return parts.stream().anyMatch(cp -> cp.getUser().getUserId().equals(targetId));
             })
             .findFirst();
 
@@ -93,32 +98,34 @@ public class ChatRoomService {
         if (existingDm.isPresent()) {
             dmRoom = existingDm.get();
         } else {
-            // 2) 새로 생성
+            // 3) 새 DM 생성 (room_name/owner_id가 DB에서 NULL 허용인지 확인)
             dmRoom = chatRoomRepository.save(ChatRoom.builder()
                 .roomType(RoomType.DM)
-                .roomName(null) // DM은 별도 이름 없이 파트너 정보로 식별
+                .roomName(null)   // NOT NULL이면 "" 등으로
                 .ownerId(null)
                 .build());
 
-            // 두 사용자 입장
+            // 4) 두 사용자 입장 레코드 저장 - 반드시 '실체 User' 사용
             ChatPart mePart = ChatPart.builder()
-                .id(new ChatPartId(dmRoom.getRoomId(), meId))
+                .id(new ChatPartId(dmRoom.getRoomId(), me.getUserId()))
                 .room(dmRoom)
-                .user(userRepository.getReferenceById(meId))
+                .user(me)
                 .alarm(Alarm.ON)
                 .build();
+
             ChatPart partnerPart = ChatPart.builder()
-                .id(new ChatPartId(dmRoom.getRoomId(), targetId))
+                .id(new ChatPartId(dmRoom.getRoomId(), partner.getUserId()))
                 .room(dmRoom)
-                .user(userRepository.getReferenceById(targetId))
+                .user(partner)
                 .alarm(Alarm.ON)
                 .build();
+
             chatPartRepository.saveAll(List.of(mePart, partnerPart));
         }
 
-        // DM 응답(파트너 정보, 마지막 메시지/미확인 포함)
-        return toDmRoomResponse(dmRoom, meId, partner);
+        return toDmRoomResponse(dmRoom, me.getUserId(), partner);
     }
+
 
     /**
      * 방 단건 조회 + 메타(마지막 메시지, 미확인, 멤버 수 or DM 파트너) 포함
@@ -179,7 +186,7 @@ public class ChatRoomService {
         return RoomResponseDTO.fromDm(
             room,
             partner.getUserId(),
-            partner.getNickname(),
+            partner.getName(),
             partner.getImage(),
             lastMsg,
             unread

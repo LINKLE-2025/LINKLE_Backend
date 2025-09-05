@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.linkle.domain.dto.PostDTO;
+import com.linkle.domain.dto.ProfilePostDTO;
+import com.linkle.domain.entity.Post;
 import com.linkle.service.PostService;
 import com.linkle.service.ProfileService;
 
@@ -23,6 +25,22 @@ public class PostController {
 
     private final PostService postService;
     private final ProfileService profileService;
+
+    @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Long> updatePost(
+        @PathVariable Long postId,
+        @RequestPart("content") String content,  // 문자열도 multipart part로 받음
+        @RequestPart(value = "file", required = false) MultipartFile file // 선택적 이미지 파일
+    ) throws IOException {
+        Long updatedId = postService.updatePost(postId, content, file);
+        return ResponseEntity.ok(updatedId);
+    }
+
+
+    @DeleteMapping("/{postId}")
+    public Long deletePost(@PathVariable Long postId) {
+        return postService.deletePost(postId);
+    }
 
     @GetMapping("/{postId}")
     public PostDTO getPost(@PathVariable Long postId) {
@@ -78,4 +96,10 @@ public class PostController {
                 .contentType(resolveMediaType(key))
                 .body(data);
         }
+
+    // 유저 포스트 조회
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<ProfilePostDTO>> getUserPosts(@PathVariable Long userId) {
+        return ResponseEntity.ok(profileService.getProfilePost(userId));
+    }
 }

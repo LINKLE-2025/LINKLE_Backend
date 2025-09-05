@@ -67,10 +67,10 @@ public class User {
     private Integer bankId;
 
     @Column(name = "account_number")
-    private Integer accountNumber;
+    private String accountNumber;
 
     @Column(name = "balance")
-    private  Integer balance;
+    private  Long balance;
 
     @Column(name = "created_date", nullable = false)
     private LocalDate createdDate;

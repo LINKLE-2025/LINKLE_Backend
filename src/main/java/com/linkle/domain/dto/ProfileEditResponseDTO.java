@@ -17,7 +17,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 // 응답용
-public class UserResponseDTO {
+public class ProfileEditResponseDTO {
 
     private Long userId;
     private String name;
@@ -27,13 +27,13 @@ public class UserResponseDTO {
     private String image;
     private String background;
     private String memo;
-    private Integer accountNumber;
+    private String accountNumber;
     private LocalDate createdDate;
 
     // Entity → DTO 변환
-    public static UserResponseDTO fromEntity(User user) {
+    public static ProfileEditResponseDTO fromEntity(User user) {
         if (user == null) return null;
-        return UserResponseDTO.builder()
+        return ProfileEditResponseDTO.builder()
             .userId(user.getUserId())
             .name(user.getName())
             .email(user.getEmail())
@@ -48,10 +48,10 @@ public class UserResponseDTO {
     }
 
     // List<Entity> → List<DTO> 변환
-    public static List<UserResponseDTO> fromEntityList(List<User> users) {
+    public static List<ProfileEditResponseDTO> fromEntityList(List<User> users) {
         if (users == null) return List.of(); // null 대신 빈 불변 리스트 반환
         return users.stream()
-            .map(UserResponseDTO::fromEntity)
+            .map(ProfileEditResponseDTO::fromEntity)
             .toList();
     }
 }

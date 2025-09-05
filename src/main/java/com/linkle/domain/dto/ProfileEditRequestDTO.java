@@ -7,8 +7,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-// 요청용 (회원가입/수정용)
-public class UserRequestDTO {
+// 요청용 (수정용)
+public class ProfileEditRequestDTO {
 
     private String name;
     private String email;
@@ -18,5 +18,5 @@ public class UserRequestDTO {
     private String image;
     private String background;
     private String memo;
-    private Integer accountNumber;
+    private String accountNumber;
 }

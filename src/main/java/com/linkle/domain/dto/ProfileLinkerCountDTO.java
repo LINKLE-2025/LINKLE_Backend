@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class UserLinkerCountDTO {
+public class ProfileLinkerCountDTO {
     private Long categoryId;
     private Long count;
 }

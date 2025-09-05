@@ -5,12 +5,17 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.linkle.domain.dto.UserLinkerCountDTO;
-import com.linkle.domain.dto.UserParticipateLinkerDTO;
-import com.linkle.domain.dto.UserRequestDTO;
-import com.linkle.domain.dto.UserResponseDTO;
+import com.linkle.domain.dto.LinkerDTO;
+import com.linkle.domain.dto.PostDTO;
+import com.linkle.domain.dto.ProfileLinkerCountDTO;
+import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
+import com.linkle.domain.dto.ProfileEditRequestDTO;
+import com.linkle.domain.dto.ProfileEditResponseDTO;
+import com.linkle.domain.dto.ProfilePostDTO;
+import com.linkle.domain.entity.Post;
 import com.linkle.domain.entity.User;
 import com.linkle.repository.ParticipateRepository;
+import com.linkle.repository.PostRepository;
 import com.linkle.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -33,30 +38,45 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final ParticipateRepository participateRepository;
     private final S3Client s3Client;
-
+    private final PostRepository postRepository;
     // minio 저장소 활용
     @Value("${minio.bucket}")
     private String bucketName;
 
     // 유저 조회
-    public UserResponseDTO getUserProfile(Long userId) {
+    public ProfileEditResponseDTO getUserProfile(Long userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
-        return UserResponseDTO.fromEntity(user);
+        return ProfileEditResponseDTO.fromEntity(user);
     }
 
     //유저 링커 참여 내역 조회
-    public List<UserParticipateLinkerDTO> getUserLineker(Long userId) {
+    public List<ProfileParticipateLinkerDTO> getUserLineker(Long userId) {
         return participateRepository.findParticipationsByUserId(userId);
     }
 
     // 유저 링커 참여 통계 조회
-    public List<UserLinkerCountDTO> getUserCount(Long userId) {
+    public List<ProfileLinkerCountDTO> getUserCount(Long userId) {
         return participateRepository.countUserParticipationByCategory(userId);
     }
 
+    // 유저 포스트 조회
+    public List<ProfilePostDTO> getProfilePost(Long userId) {
+        return postRepository.findByUserUserIdOrderByCreatedDateDesc(userId)
+            .stream()
+            .map(post -> new ProfilePostDTO(
+                post.getPostId(),
+                post.getImage(),
+                post.getMemo(),
+                post.getCreatedDate(),
+                post.getUser().getUserId()
+            ))
+            .toList();
+    }
+
+
     // 유저 수정
-    public UserResponseDTO updateUserProfile(Long userId, UserRequestDTO dto) {
+    public ProfileEditResponseDTO updateUserProfile(Long userId, ProfileEditRequestDTO dto) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
@@ -71,7 +91,7 @@ public class ProfileService {
         if (dto.getAccountNumber() != null) user.setAccountNumber(dto.getAccountNumber());
 
         userRepository.save(user);
-        return UserResponseDTO.fromEntity(user);
+        return ProfileEditResponseDTO.fromEntity(user);
     }
 
     // 유저 삭제
@@ -80,27 +100,27 @@ public class ProfileService {
     }
 
     // 유저 삽입
-    public UserResponseDTO insertUser(UserRequestDTO dto) {
+    public ProfileEditResponseDTO insertUser(ProfileEditRequestDTO dto) {
         User user = User.builder()
             .name(dto.getName())
             .email(dto.getEmail())
             .password(dto.getPassword())
             .nickname(dto.getNickname())
             .gender(dto.getGender())
-            .balance(0)
+            .balance(0L)
             .createdDate(LocalDate.now())
             .build();
 
         userRepository.save(user);
-        return UserResponseDTO.fromEntity(user);
+        return ProfileEditResponseDTO.fromEntity(user);
     }
 
     // 모든 유저 조회
-    public List<UserResponseDTO> getAllUsers() {
+    public List<ProfileEditResponseDTO> getAllUsers() {
         List<User> userEntities = userRepository.findAll();
-        List<UserResponseDTO> userDtoList = new ArrayList<>();
+        List<ProfileEditResponseDTO> userDtoList = new ArrayList<>();
         for (User userEntity : userEntities) {
-            UserResponseDTO userDto = UserResponseDTO.fromEntity(userEntity);
+            ProfileEditResponseDTO userDto = ProfileEditResponseDTO.fromEntity(userEntity);
             userDtoList.add(userDto);
         }
         return userDtoList;

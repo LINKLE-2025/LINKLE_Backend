@@ -10,4 +10,7 @@ import com.linkle.domain.entity.Post;
 public interface PostRepository extends JpaRepository<Post, Long> {
 
    List<Post> findByLinkerLinkerId(Long linkerId);
+
+   // 프로필에서 유저 아이디를 통해 포스트 조회
+   List<Post> findByUserUserIdOrderByCreatedDateDesc(Long userId);
 }

@@ -18,5 +18,5 @@ public class UserRequestDTO {
     private String image;
     private String background;
     private String memo;
-    private Integer accountNumber;
+    private String accountNumber;
 }

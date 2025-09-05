@@ -27,7 +27,7 @@ public class UserResponseDTO {
     private String image;
     private String background;
     private String memo;
-    private Integer accountNumber;
+    private String accountNumber;
     private LocalDate createdDate;
 
     // Entity → DTO 변환

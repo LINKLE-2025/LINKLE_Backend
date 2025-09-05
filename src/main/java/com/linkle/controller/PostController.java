@@ -24,6 +24,22 @@ public class PostController {
     private final PostService postService;
     private final ProfileService profileService;
 
+    @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Long> updatePost(
+        @PathVariable Long postId,
+        @RequestPart("content") String content,  // 문자열도 multipart part로 받음
+        @RequestPart(value = "file", required = false) MultipartFile file // 선택적 이미지 파일
+    ) throws IOException {
+        Long updatedId = postService.updatePost(postId, content, file);
+        return ResponseEntity.ok(updatedId);
+    }
+
+
+    @DeleteMapping("/{postId}")
+    public Long deletePost(@PathVariable Long postId) {
+        return postService.deletePost(postId);
+    }
+
     @GetMapping("/{postId}")
     public PostDTO getPost(@PathVariable Long postId) {
         return postService.findById(postId);

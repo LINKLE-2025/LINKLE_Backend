@@ -21,10 +21,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws-stomp")
             .setAllowedOriginPatterns(
                 "http://localhost:*", "https://localhost:*",
-                "http://127.0.0.1:*", "https://127.0.0.1:*",
-                "http://192.168.0.128:*", "https://192.168.0.128:*",
-                "http://192.168.0.129:*", "https://192.168.0.129:*"
+                "http://192.168.*:*", "https://192.168.*:*"
             );
         // .withSockJS(); // 필요 시 사용
     }
+
 }

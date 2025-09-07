@@ -10,15 +10,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // 검색에서 활용하기 위한 레포지토리
-    @Query("""
-            SELECT u
-            FROM User u
-            WHERE u.nickname LIKE %:word%
-               OR u.name LIKE %:word%
-        """)
-    List<User> searchByNicknameOrName(@Param("word") String word);
-
     boolean existsByEmail(String email);
     boolean existsByNickname(String nickname);
 

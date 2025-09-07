@@ -19,7 +19,7 @@ public class SearchService {
     private final FriendRepository friendRepository;
 
     public List<SearchResponseDTO> searchUsersWithFriendStatus(String word, Long currentUserId) {
-        List<User> users = userRepository.searchByNicknameOrName(word);
+        List<User> users = friendRepository.searchByNicknameOrName(word);
 
         return users.stream()
             .map(user -> {

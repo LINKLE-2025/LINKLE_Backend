@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.linkle.domain.dto.FriendResponseDTO;
 import com.linkle.domain.entity.Friend;
+import com.linkle.domain.entity.User;
 
 public interface FriendRepository extends JpaRepository<Friend, Long> {
 
@@ -93,4 +94,15 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
         "WHERE (f.user1.userId = :userId1 AND f.user2.userId = :userId2) " +
         "   OR (f.user1.userId = :userId2 AND f.user2.userId = :userId1)")
     Friend findByUserPair(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+
+
+    // 검색에서 활용하기 위한 레포지토리
+    // 친구 검색 기능으로 FriendRepository로 이동
+    @Query("""
+            SELECT u
+            FROM User u
+            WHERE u.nickname LIKE %:word%
+               OR u.name LIKE %:word%
+        """)
+    List<User> searchByNicknameOrName(@Param("word") String word);
 }

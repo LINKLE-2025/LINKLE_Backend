@@ -1,7 +1,6 @@
 package com.linkle.controller;
 
-import java.security.SecureRandom;
-
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.linkle.domain.dto.DuplicationCheckResponseDTO;
 import com.linkle.service.AuthService;
-import com.linkle.service.MailService;
+import com.linkle.service.AuthMailService;
 import com.linkle.util.CodeGenerator;
 
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
     private final AuthService authService;
-    private final MailService mailService;
+    private final AuthMailService authMailService;
 
     // 로그인
     @PostMapping("/login")
@@ -51,19 +50,21 @@ public class AuthController {
     }
 
     // 이메일 인증 코드 발송
-    @PostMapping("/auth/email/{email}")
-    public ResponseEntity<Void> verifyEmail(@PathVariable String email) {
-        String code = CodeGenerator.generateCode();
+    @PostMapping("/auth/email/{email:.+}")
+    public ResponseEntity<Void> sendCode(@PathVariable String email) {
+        String code = CodeGenerator.generateCode();  // 6자리 인증 코드 생성
         System.out.println("Verification code for " + email + ": " + code);
-        mailService.sendMail(email, "LINKLE 이메일 인증번호", "인증번호: " + code);
+        authMailService.saveCode(email, code);  // 코드 저장
+        authMailService.sendMail(email, "LINKLE 이메일 인증번호", "인증번호: " + code);  // 이메일 발송
         return ResponseEntity.ok().build();
     }
 
     // 이메일 인증 코드 검증
-    @PostMapping("/auth/email/{email}/code")
-    public ResponseEntity<Void> sendCode(@PathVariable String email) {
-
-        return ResponseEntity.ok().build();
+    @PostMapping("/auth/email/{email:.+}/code/{code}")
+    public ResponseEntity<Boolean> verifyEmail(@PathVariable String email, @PathVariable String code) {
+        boolean verified = authMailService.verifyCode(email, code);  // 코드 검증
+        System.out.println("Verification result for " + email + ": " + verified);
+        return ResponseEntity.ok(verified);
     }
 
 }

@@ -30,7 +30,7 @@ public class PostController {
     public ResponseEntity<Long> updatePost(
         @PathVariable Long postId,
         @RequestPart("content") String content,  // 문자열도 multipart part로 받음
-        @RequestPart(value = "file", required = false) MultipartFile file // 선택적 이미지 파일
+        @RequestPart(value = "image", required = false) MultipartFile file // 선택적 이미지 파일
     ) throws IOException {
         Long updatedId = postService.updatePost(postId, content, file);
         return ResponseEntity.ok(updatedId);

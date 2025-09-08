@@ -14,7 +14,7 @@ import com.linkle.service.SearchService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/search")
+@RequestMapping("/api/search")
 @RequiredArgsConstructor
 public class SearchController {
 

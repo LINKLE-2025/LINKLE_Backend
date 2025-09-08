@@ -2,16 +2,24 @@ package com.linkle.controller;
 
 import com.linkle.domain.dto.*;
 import com.linkle.domain.entity.ChatPart;
+import com.linkle.domain.entity.ChatRoom;
 import com.linkle.repository.ChatMessageRepository;
 import com.linkle.repository.ChatPartRepository;
+import com.linkle.repository.ChatRoomRepository;
 import com.linkle.service.*;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/chat")
@@ -25,6 +33,10 @@ public class ChatRoomController {
 
     private final ChatPartRepository chatPartRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatRoomRepository chatRoomRepository;
+
+    // S3/MinIO 다운로드 재사용
+    private final ProfileService profileService;
 
     /** 그룹/클래스 방 생성 */
     @PostMapping("/room")
@@ -87,11 +99,33 @@ public class ChatRoomController {
         return unreadService.unreadSummary(me);
     }
 
-    // ----------------- helper -----------------
+    /** 톡 배경화면 */
+    @GetMapping("/view/background/{roomId}")
+    public ResponseEntity<byte[]> viewRoomBackground(@PathVariable Long roomId) throws IOException {
+        Optional<ChatRoom> room = chatRoomService.findById(roomId);
+        if (room.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        String key = room.get().getThemeColor();
+        byte[] data = profileService.downloadFile(key);
+
+        return ResponseEntity.ok()
+            .contentType(resolveMediaType(key))
+            .body(data);
+    }
+
+    // ---- helpers ----
+    private MediaType resolveMediaType(String key) {
+        String k = key.toLowerCase();
+        if (k.endsWith(".png"))  return MediaType.IMAGE_PNG;
+        if (k.endsWith(".jpg") || k.endsWith(".jpeg")) return MediaType.IMAGE_JPEG;
+        if (k.endsWith(".gif"))  return MediaType.IMAGE_GIF;
+        return MediaType.APPLICATION_OCTET_STREAM;
+    }
+
     private Long currentUserId(HttpServletRequest req) {
         String h = req.getHeader("x-user-id");
         if (h != null && !h.isBlank()) return Long.parseLong(h);
-
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName() != null) {
             try { return Long.parseLong(auth.getName()); } catch (Exception ignore) {}

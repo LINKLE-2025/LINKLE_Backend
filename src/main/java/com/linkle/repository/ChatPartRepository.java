@@ -2,6 +2,8 @@ package com.linkle.repository;
 
 import com.linkle.domain.entity.ChatPart;
 import com.linkle.domain.entity.ChatPartId;
+
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,9 +15,11 @@ public interface ChatPartRepository extends JpaRepository<ChatPart, ChatPartId> 
 
     Optional<ChatPart> findByRoom_RoomIdAndUser_UserId(Long roomId, Long userId);
 
-    List<ChatPart> findByRoom_RoomIdAndLeftDateIsNull(Long roomId);
 
     long countByRoom_RoomIdAndLeftDateIsNull(Long roomId);
+
+    @EntityGraph(attributePaths = {"user"})
+    List<ChatPart> findByRoom_RoomIdAndLeftDateIsNull(Long roomId);
 
     // 멤버 리스트용: User를 한 번에 로딩 (N+1 방지)
     @Query("""

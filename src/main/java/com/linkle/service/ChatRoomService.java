@@ -10,9 +10,17 @@ import com.linkle.repository.ChatRoomRepository;
 import com.linkle.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
@@ -27,6 +35,11 @@ public class ChatRoomService {
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
 
+    // ===== 이미지 저장소 =====
+    private final S3Client s3Client;
+    @Value("${minio.bucket}")
+    private String bucketName;
+
     /** 그룹/클래스 방 생성 (DM은 OpenDmRequest 사용) */
     @Transactional
     public RoomResponseDTO createRoom(CreateRoomRequestDTO req, Long ownerUserId) {
@@ -39,7 +52,7 @@ public class ChatRoomService {
             .roomName(req.getRoomName())
             .description(req.getDescription())
             .memo(req.getMemo())
-            .themeColor(String.valueOf(req.getThemeColor()))
+            .themeColor(String.valueOf(req.getThemeColor())) // 숫자코드 or S3 키 문자열
             .entryFee(req.getEntryFee())
             .startDate(req.getStartDate() == null ? null :
                 req.getStartDate().atZone(ZoneId.systemDefault()).toInstant())
@@ -72,15 +85,11 @@ public class ChatRoomService {
         User partner = userRepository.findById(targetId)
             .orElseThrow(() -> new EntityNotFoundException("Target user not found: " + targetId));
 
-        // 내가 참여 중인 DM 중에 상대가 포함된 방 재사용
         List<ChatRoom> myRooms = chatRoomRepository.findActiveRoomsByUserId(meId);
         Optional<ChatRoom> existingDm = myRooms.stream()
             .filter(r -> r.getRoomType() == RoomType.DM)
-            .filter(r -> {
-                // ★ fetch-join으로 멤버 + user 함께 로딩
-                List<ChatPart> parts = chatPartRepository.findActiveByRoomIdWithUser(r.getRoomId());
-                return parts.stream().anyMatch(cp -> cp.getUser().getUserId().equals(targetId));
-            })
+            .filter(r -> chatPartRepository.findActiveByRoomIdWithUser(r.getRoomId())
+                .stream().anyMatch(cp -> cp.getUser().getUserId().equals(targetId)))
             .findFirst();
 
         ChatRoom dmRoom;
@@ -121,6 +130,12 @@ public class ChatRoomService {
         return toRoomResponseWithMeta(room, meId);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<ChatRoom> findById(Long roomId) {
+        return chatRoomRepository.findById(roomId);
+    }
+
+
     /** 내가 참여 중인 방 목록 */
     @Transactional(readOnly = true)
     public List<RoomResponseDTO> listMyRooms(Long meId) {
@@ -134,7 +149,6 @@ public class ChatRoomService {
 
     private RoomResponseDTO toRoomResponseWithMeta(ChatRoom room, Long meId) {
         if (room.getRoomType() == RoomType.DM) {
-            // ★ DM: 파트너 조회 시 fetch-join 사용
             List<ChatPart> parts = chatPartRepository.findActiveByRoomIdWithUser(room.getRoomId());
             ChatPart partnerPart = parts.stream()
                 .filter(p -> !p.getUser().getUserId().equals(meId))
@@ -166,7 +180,7 @@ public class ChatRoomService {
 
         return RoomResponseDTO.fromDm(
             room,
-            partner.getUserId(),   // ✅ dmPartnerId 세팅
+            partner.getUserId(),
             partner.getName(),
             partner.getImage(),
             lastMsg,

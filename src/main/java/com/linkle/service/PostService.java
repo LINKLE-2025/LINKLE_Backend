@@ -37,9 +37,6 @@ public class PostService {
     // minio 저장소 활용
     @Value("${minio.bucket}")
     private String bucketName;
-    
-    
-
 
     public List<PostDTO> findByLinkerLinkerId(Long linkerId){
         if (linkerId == null) {
@@ -113,7 +110,7 @@ public class PostService {
 
         // 이미지 업데이트
         if (file != null && !file.isEmpty()) {
-            String imageUrl = uploadPostImage(file, postId); // postId로 저장 경로 구분
+            String imageUrl = uploadPostImage(file, post.getLinker().getLinkerId());
             post.setImage(imageUrl);
         }
 

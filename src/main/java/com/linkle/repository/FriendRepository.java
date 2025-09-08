@@ -81,8 +81,17 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     @Query("""
         SELECT f FROM Friend f
         WHERE (f.user1.userId = :userId OR f.user2.userId = :userId)
+            AND f.state = 'ACCEPTED'
     """)
     List<Friend> findAcceptedFriends(@Param("userId") Long userId);
+
+
+    @Query("""
+        SELECT f FROM Friend f
+        WHERE (f.user1.userId = :userId OR f.user2.userId = :userId)
+    """)
+    List<Friend> findAllFriends(@Param("userId") Long userId);
+
 
     // 친구 삭제
     // deleteById

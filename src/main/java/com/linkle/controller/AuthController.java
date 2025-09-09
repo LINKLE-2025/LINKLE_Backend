@@ -20,6 +20,7 @@ import com.linkle.domain.dto.ExistsResponseDTO;
 import com.linkle.domain.dto.UserAuthDTO;
 import com.linkle.domain.dto.UserLoginRequestDTO;
 import com.linkle.domain.dto.UserLoginResponseDTO;
+import com.linkle.domain.dto.UserPasswordResetDTO;
 import com.linkle.domain.dto.UserSignupRequestDTO;
 import com.linkle.service.AuthService;
 import com.linkle.service.AuthMailService;
@@ -219,6 +220,14 @@ public class AuthController {
         boolean verified = authMailService.verifyCode(email, code);  // 코드 검증
         System.out.println("Verification result for " + email + ": " + verified);
         return ResponseEntity.ok(verified);
+    }
+
+    // 비밀번호 재설정
+    @PostMapping("/password/reset")
+    public ResponseEntity<Boolean> resetPassword(@RequestBody UserPasswordResetDTO requestDTO) {
+        System.out.println("이메일: " + requestDTO.getEmail() + ", 새 비밀번호: " + requestDTO.getPassword());
+        boolean resetSuccess = authService.resetPassword(requestDTO.getEmail(), requestDTO.getPassword());
+        return ResponseEntity.ok(resetSuccess);
     }
 
 }

@@ -7,6 +7,7 @@ import com.linkle.domain.entity.*;
 import com.linkle.repository.ChatMessageRepository;
 import com.linkle.repository.ChatPartRepository;
 import com.linkle.repository.ChatRoomRepository;
+import com.linkle.repository.LinkerRepository;
 import com.linkle.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class ChatRoomService {
     private final ChatPartRepository chatPartRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
+    private final LinkerRepository  linkerRepository;
 
     // ===== 이미지 저장소 =====
     private final S3Client s3Client;
@@ -46,6 +48,12 @@ public class ChatRoomService {
         if (req.getRoomType() == RoomType.DM) {
             throw new IllegalArgumentException("DM은 OpenDmRequest를 사용하세요.");
         }
+        Linker linkerRef = null;
+        if (req.getLinkerId() != null) {
+            // 존재 검증을 하고 싶으면 findById + orElseThrow 사용
+            linkerRef = linkerRepository.getReferenceById(req.getLinkerId());
+        }
+
 
         ChatRoom room = ChatRoom.builder()
             .roomType(req.getRoomType())
@@ -57,6 +65,7 @@ public class ChatRoomService {
             .startDate(req.getStartDate() == null ? null :
                 req.getStartDate().atZone(ZoneId.systemDefault()).toInstant())
             .ownerId(ownerUserId)
+            .linker(linkerRef)
             .build();
 
         ChatRoom saved = chatRoomRepository.save(room);

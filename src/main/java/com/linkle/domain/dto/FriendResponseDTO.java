@@ -21,6 +21,7 @@ public class FriendResponseDTO {
     private String nickname;
     private FriendState state;
     private String image;
+    private String gender;
 
 
 
@@ -39,6 +40,7 @@ public class FriendResponseDTO {
             .nickname(other.getNickname())
             .state(friend.getState())
             .image(other.getImage())
+            .gender(other.getGender())
             .build();
     }
 }

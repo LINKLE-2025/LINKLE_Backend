@@ -109,4 +109,17 @@ public class AuthService {
             return userRepository.existsByNickname(nickname);
     }
 
+    // 비밀번호 재설정
+    public boolean resetPassword(String email, String newPassword) {
+        // 이메일로 사용자 조회
+        User user = userRepository.findByEmail(email)
+                        .orElseThrow(() -> new RuntimeException("존재하지 않는 이메일입니다."));
+        // 새 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        // 비밀번호 업데이트
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+        return true;
+    }
+
 }

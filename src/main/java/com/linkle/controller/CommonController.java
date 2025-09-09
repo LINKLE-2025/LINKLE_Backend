@@ -1,18 +1,17 @@
 package com.linkle.controller;
 
-import java.util.Map;
-
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
-public class SampleController {
+public class CommonController {
 
-    @GetMapping("/test")
-    public Map<String, String> test() {
-        return Map.of("msg", "테스트");
+    @GetMapping("/health")
+    public ResponseEntity<Void> healthCheck() {
+        return ResponseEntity.ok().build();
     }
     
 }

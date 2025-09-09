@@ -30,9 +30,9 @@ public class JwtTokenProvider {
     }
 
     // Access Token 발급
-    public String generateAccessToken(String email) {
+    public String generateAccessToken(String userId) {
         return Jwts.builder()
-            .setSubject(email)
+            .setSubject(userId)
             .setIssuedAt(new Date())
             .setExpiration(new Date(System.currentTimeMillis() + accessExpiration))
             .signWith(key, SignatureAlgorithm.HS256)
@@ -40,9 +40,9 @@ public class JwtTokenProvider {
     }
 
     // Refresh Token 발급
-    public String generateRefreshToken(String email) {
+    public String generateRefreshToken(String userId) {
         return Jwts.builder()
-            .setSubject(email)
+            .setSubject(userId)
             .setIssuedAt(new Date())
             .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
             .signWith(key, SignatureAlgorithm.HS256)
@@ -62,14 +62,13 @@ public class JwtTokenProvider {
         }
     }
 
-    // 토큰에서 이메일 추출
-    public String getEmailFromToken(String token) {
+    // 토큰에서 사용자 ID 추출
+    public String getUserIdFromToken(String token) {
         return Jwts.parserBuilder()
             .setSigningKey(key)
             .build()
             .parseClaimsJws(token)
-            .getBody()
-            .getSubject();
+            .getBody().getSubject();
     }
 
 }

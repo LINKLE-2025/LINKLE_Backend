@@ -85,8 +85,12 @@ public class ProfileService {
         if (dto.getPassword() != null) user.setPassword(dto.getPassword());
         if (dto.getNickname() != null) user.setNickname(dto.getNickname());
         if (dto.getGender() != null) user.setGender(dto.getGender());
-        if (dto.getImage() != null) user.setImage(dto.getImage());
-        if (dto.getBackground() != null) user.setBackground(dto.getBackground());
+        if (dto.getImage() != null && !dto.getImage().isBlank()) {
+            user.setImage(dto.getImage());
+        }
+        if (dto.getBackground() != null && !dto.getBackground().isBlank()) {
+            user.setBackground(dto.getBackground());
+        }
         if (dto.getMemo() != null) user.setMemo(dto.getMemo());
         if (dto.getAccountNumber() != null) user.setAccountNumber(dto.getAccountNumber());
 

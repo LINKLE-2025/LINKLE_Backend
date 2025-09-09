@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/chat")
+@RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatRoomController {
 

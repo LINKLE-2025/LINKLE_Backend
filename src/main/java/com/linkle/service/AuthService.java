@@ -99,14 +99,14 @@ public class AuthService {
         return true;
     }
 
-    // 이메일 중복 체크
-    public boolean isEmailExists(String email) {
-        return !userRepository.existsByEmail(email);
-    }
+        // 이메일 중복 체크
+        public boolean isEmailExists(String email) {
+            return userRepository.existsByEmail(email);
+        }
 
-    // 닉네임 중복 체크
-    public boolean isNicknameExists(String nickname) {
-        return !userRepository.existsByNickname(nickname);
+        // 닉네임 중복 체크
+        public boolean isNicknameExists(String nickname) {
+            return userRepository.existsByNickname(nickname);
     }
 
 }

@@ -23,4 +23,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
            order by r.createdDate desc
            """)
     List<ChatRoom> findActiveRoomsByUserId(@Param("userId") Long userId);
+
+
 }

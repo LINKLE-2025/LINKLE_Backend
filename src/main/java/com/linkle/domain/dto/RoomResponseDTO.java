@@ -19,6 +19,7 @@ public class RoomResponseDTO {
     private Long roomId;
     private RoomType roomType;
     private String roomName;
+    private Long linkerId;
 
     // ===== 그룹/클래스 전용 =====
     private String description;
@@ -57,6 +58,11 @@ public class RoomResponseDTO {
                 .startDate(r.getStartDate())
                 .ownerId(r.getOwnerId())
                 .createdDate(r.getCreatedDate());
+
+            if (r.getLinker() != null) {
+                builder.linkerId(r.getLinker().getLinkerId());
+            }
+
         }
 
         return builder.build();

@@ -35,7 +35,7 @@ public class ChatRoom {
     @Column(length = 500)
     private String memo;
 
-    @Column(name = "theme_color", length = 20)
+    @Column(name = "theme_color")
     private String themeColor;
 
     @Column(name = "owner_id")

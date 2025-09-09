@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class CreateRoomRequestDTO {
+    @Positive(message = "링커아이디 필수입니다.")
+    private Long linkerId;
 
     @NotNull(message = "방 타입은 필수입니다")
     private RoomType roomType;             // LIGHT or CLASS (DM은 OpenDmRequest 사용)
@@ -27,10 +29,8 @@ public class CreateRoomRequestDTO {
     @Size(max = 200, message = "메모는 200자를 넘을 수 없습니다")
     private String memo;
 
-    // ====== 팔레트 색상 코드 (1~9) ======
+    // ====== 팔레트 색상 코드 (1~7)이지만 s3에 red, orange,yellow,green, blue,purple.png로 저장되어야함 7에는 이미지 저장 로직추가 예정======
     @NotNull(message = "테마 코드는 필수입니다")
-    @Min(value = 1, message = "테마 코드는 1 이상이어야 합니다")
-    @Max(value = 9, message = "테마 코드는 9 이하여야 합니다")
     private Integer themeColor;
 
     // ====== CLASS 전용 옵션 ======

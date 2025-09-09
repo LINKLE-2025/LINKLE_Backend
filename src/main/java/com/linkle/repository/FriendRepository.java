@@ -61,28 +61,21 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
         """)
     Optional<Friend> findFriendRelation(Long userId1, Long userId2);
 
-    // 친구 목록 조회 (DTO로 바로 가져오기 → N+1 방지)
+    // 친구 목록 조회
     @Query("""
-            SELECT new com.linkle.domain.dto.FriendResponseDTO(
-                f.friendId,
-                f.user1.userId,
-                f.user2.userId,
-                CASE WHEN f.user1.userId = :userId THEN f.user2.name ELSE f.user1.name END,
-                CASE WHEN f.user1.userId = :userId THEN f.user2.nickname ELSE f.user1.nickname END,
-                f.state,
-                CASE WHEN f.user1.userId = :userId THEN f.user2.image ELSE f.user1.image END
-              )
-            FROM Friend f
-            WHERE (f.user1.userId = :userId OR f.user2.userId = :userId)
+        SELECT f FROM Friend f
+        WHERE (f.user1.userId = :userId OR f.user2.userId = :userId)
             AND f.state = 'ACCEPTED'
-        """)
-    List<FriendResponseDTO> findAcceptedFriends1(@Param("userId") Long userId);
+    """)
+    List<Friend> findAcceptedFriends(@Param("userId") Long userId);
+
 
     @Query("""
         SELECT f FROM Friend f
         WHERE (f.user1.userId = :userId OR f.user2.userId = :userId)
     """)
-    List<Friend> findAcceptedFriends(@Param("userId") Long userId);
+    List<Friend> findAllFriends(@Param("userId") Long userId);
+
 
     // 친구 삭제
     // deleteById

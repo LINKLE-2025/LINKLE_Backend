@@ -2,6 +2,7 @@ package com.linkle.controller;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import com.linkle.domain.dto.PostDTO;
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
@@ -14,6 +15,7 @@ import com.linkle.service.ProfileService;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
@@ -54,20 +56,20 @@ public class ProfileController {
     @PatchMapping(value = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProfileEditResponseDTO> updateUserProfile(
         @PathVariable Long userId,
-        @RequestPart(value = "dto") ProfileEditRequestDTO dto,
+        @RequestPart("dto") ProfileEditRequestDTO dto,
         @RequestPart(value = "profile", required = false) MultipartFile profile,
-        @RequestPart(value = "background", required = false) MultipartFile background) throws IOException {
-
-        // 프로필 이미지
+        @RequestPart(value = "background", required = false) MultipartFile background
+    ) throws IOException {
         if (profile != null && !profile.isEmpty()) {
             dto.setImage(profileService.uploadProfileImage(profile, userId));
         }
-        // 프로필 배경이미지
         if (background != null && !background.isEmpty()) {
             dto.setBackground(profileService.uploadBackgroundImage(background, userId));
         }
         return ResponseEntity.ok(profileService.updateUserProfile(userId, dto));
     }
+
+
 
     // 유저 삭제
     @DeleteMapping("/{userId}")
@@ -105,7 +107,9 @@ public class ProfileController {
         ProfileEditResponseDTO dto = profileService.getUserProfile(userId);
         String key = dto.getImage();
         byte[] data = profileService.downloadFile(key);
+
         return ResponseEntity.ok()
+            .cacheControl(CacheControl.noCache().mustRevalidate())
             .contentType(resolveMediaType(key))
             .body(data);
     }
@@ -117,6 +121,7 @@ public class ProfileController {
         String key = dto.getBackground();
         byte[] data = profileService.downloadFile(key);
         return ResponseEntity.ok()
+            .cacheControl(CacheControl.noCache().mustRevalidate())
             .contentType(resolveMediaType(key))
             .body(data);
     }

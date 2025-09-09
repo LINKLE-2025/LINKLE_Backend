@@ -15,7 +15,7 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
     // 링커 참여 리스트 조회
     @Query("""
             SELECT new com.linkle.domain.dto.ProfileParticipateLinkerDTO(
-                l.linkerId, l.name, l.state, l.memo, p.participatedDate
+                l.linkerId, l.name, l.state, l.memo, p.participatedDate, l.categoryId
             )
             FROM Participate p
             JOIN p.linker l

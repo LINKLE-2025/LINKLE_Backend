@@ -1,8 +1,11 @@
 package com.linkle.controller;
 
+import java.time.Duration;
 import java.util.Map;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.linkle.domain.dto.DuplicationCheckResponseDTO;
 import com.linkle.domain.dto.UserLoginRequestDTO;
+import com.linkle.domain.dto.UserLoginResponseDTO;
 import com.linkle.domain.dto.UserSignupRequestDTO;
 import com.linkle.service.AuthService;
 import com.linkle.service.AuthMailService;
@@ -30,17 +34,32 @@ public class AuthController {
 
     // 로그인
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody UserLoginRequestDTO userLoginRequestDTO) {
-        System.out.println("받은 로그인 요청: " + userLoginRequestDTO);
+    public ResponseEntity<?> login(@RequestBody UserLoginRequestDTO requestDTO) {
+        System.out.println("받은 로그인 요청: " + requestDTO);
         try {
             // 로그인 처리 및 JWT 토큰 발급
-            String token = authService.login(userLoginRequestDTO);
-            System.out.println("발급된 토큰: " + token);
-            // 성공 시 토큰과 성공 메시지 반환
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "token", token
-            ));
+            UserLoginResponseDTO responseDTO = authService.login(requestDTO);
+            System.out.println("발급된 토큰: " + responseDTO);
+            // ✅ 토큰을 HttpOnly Cookie로 설정
+            ResponseCookie accessCookie = ResponseCookie.from("accessToken", responseDTO.getAccessToken())
+                .httpOnly(true)         // JS 접근 차단
+                .secure(true)           // HTTPS 환경에서만 전송
+                .sameSite("Strict")     // CSRF 방지
+                .path("/")              // 모든 경로에서 전송
+                .maxAge(Duration.ofMinutes(30)) // 만료 시간 (예: 30분)
+                .build();
+            ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", responseDTO.getRefreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(Duration.ofDays(14))
+                .build();
+            // 로그인 성공 시 토큰을 포함한 응답 반환
+            return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(Map.of("success", true, "message", "로그인 성공"));
         } catch (RuntimeException e) {
             // 로그인 실패 시 에러 메시지 반환
             System.out.println("로그인 실패: " + e.getMessage());
@@ -49,7 +68,7 @@ public class AuthController {
                 "message", e.getMessage()
             ));
         } catch (Exception e) {
-            // 로그인 실패 시 에러 메시지 반환
+            // 기타 예외 처리
             System.out.println("로그인 실패: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "success", false,
@@ -58,11 +77,35 @@ public class AuthController {
         }
     }
 
+    // 로그아웃
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        // 쿠키 삭제를 위한 빈 쿠키 생성
+        ResponseCookie deleteAccessCookie = ResponseCookie.from("accessToken", "")
+            .httpOnly(true)
+            .secure(true)
+            .sameSite("Lax")
+            .path("/")
+            .maxAge(0) // 즉시 만료
+            .build();
+        ResponseCookie deleteRefreshCookie = ResponseCookie.from("refreshToken", "")
+            .httpOnly(true)
+            .secure(true)
+            .sameSite("Lax")
+            .path("/")
+            .maxAge(0) // 즉시 만료
+            .build();
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, deleteAccessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, deleteRefreshCookie.toString())
+            .body(Map.of("success", true, "message", "로그아웃 성공"));
+    }
+
     // 회원가입
     @PostMapping("/signup")
-    public ResponseEntity<Boolean> signup(@RequestBody UserSignupRequestDTO userSignupRequestDTO) {
-        System.out.println("받은 회원가입 요청: " + userSignupRequestDTO);
-        boolean signupSuccess = authService.signup(userSignupRequestDTO);  // 회원가입 처리
+    public ResponseEntity<Boolean> signup(@RequestBody UserSignupRequestDTO requestDTO) {
+        System.out.println("받은 회원가입 요청: " + requestDTO);
+        boolean signupSuccess = authService.signup(requestDTO);  // 회원가입 처리
         return ResponseEntity.ok(signupSuccess); // 성공 여부 반환
     }
 

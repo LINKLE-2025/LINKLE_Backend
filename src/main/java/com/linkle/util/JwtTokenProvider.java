@@ -7,6 +7,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,7 +15,12 @@ public class JwtTokenProvider {
 
     // 실제 운영에서는 최소 32바이트 이상 복잡한 키를 사용하세요
     private static final String SECRET_KEY = "your-secret-key-your-secret-key-123456";
-    private static final long EXPIRATION = 1000L * 60 * 60; // 1시간
+
+    // JWT 토큰 만료 시간
+    @Value("${jwt.access-token-expiration:900000}")
+    private long accessExpiration;
+    @Value("${jwt.refresh-token-expiration:1209600000}")
+    private long refreshExpiration;
 
     private final SecretKey key;
 
@@ -23,12 +29,47 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(String email) {
+    // Access Token 발급
+    public String generateAccessToken(String email) {
         return Jwts.builder()
             .setSubject(email)
             .setIssuedAt(new Date())
-            .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
-            .signWith(key, SignatureAlgorithm.HS256) // ✅ SecretKey 객체 사용
+            .setExpiration(new Date(System.currentTimeMillis() + accessExpiration))
+            .signWith(key, SignatureAlgorithm.HS256)
             .compact();
     }
+
+    // Refresh Token 발급
+    public String generateRefreshToken(String email) {
+        return Jwts.builder()
+            .setSubject(email)
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + refreshExpiration))
+            .signWith(key, SignatureAlgorithm.HS256)
+            .compact();
+    }
+
+    // 토큰 검증
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // 토큰에서 이메일 추출
+    public String getEmailFromToken(String token) {
+        return Jwts.parserBuilder()
+            .setSigningKey(key)
+            .build()
+            .parseClaimsJws(token)
+            .getBody()
+            .getSubject();
+    }
+
 }

@@ -14,10 +14,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.linkle.domain.dto.DuplicationCheckResponseDTO;
+import com.linkle.domain.dto.ExistsResponseDTO;
 import com.linkle.domain.dto.UserAuthDTO;
 import com.linkle.domain.dto.UserLoginRequestDTO;
 import com.linkle.domain.dto.UserLoginResponseDTO;
@@ -192,16 +191,16 @@ public class AuthController {
 
     // 이메일 중복 체크
     @GetMapping("/email/{email}")
-    public DuplicationCheckResponseDTO emailCheck(@PathVariable String email) {
+    public ExistsResponseDTO emailCheck(@PathVariable String email) {
         boolean emailExists = authService.isEmailExists(email);
-        return new DuplicationCheckResponseDTO(emailExists);
+        return new ExistsResponseDTO(emailExists);
     }
 
     // 닉네임 중복 체크
     @GetMapping("/nickname/{nickname}")
-    public DuplicationCheckResponseDTO nicknameCheck(@PathVariable String nickname) {
+    public ExistsResponseDTO nicknameCheck(@PathVariable String nickname) {
         boolean nicknameExists = authService.isNicknameExists(nickname);
-        return new DuplicationCheckResponseDTO(nicknameExists);
+        return new ExistsResponseDTO(nicknameExists);
     }
 
     // 이메일 인증 코드 발송

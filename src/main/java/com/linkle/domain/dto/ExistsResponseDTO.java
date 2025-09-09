@@ -11,8 +11,8 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DuplicationCheckResponseDTO {
+public class ExistsResponseDTO {
 
-    private boolean available;
+    private boolean exists;
 
 }

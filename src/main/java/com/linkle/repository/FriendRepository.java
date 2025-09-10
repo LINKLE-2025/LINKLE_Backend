@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.linkle.domain.dto.FriendResponseDTO;
 import com.linkle.domain.entity.Friend;
@@ -98,4 +100,10 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
                OR u.name LIKE %:word%
         """)
     List<User> searchByNicknameOrName(@Param("word") String word);
+
+    // 회원 탈퇴를 위한 친구 삭제
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Friend f WHERE f.user1.userId = :userId OR f.user2.userId = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 }

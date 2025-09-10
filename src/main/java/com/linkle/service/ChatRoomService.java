@@ -204,4 +204,106 @@ public class ChatRoomService {
         return (int) chatMessageRepository
             .countByRoom_RoomIdAndMessageIdGreaterThan(roomId, lastReadId);
     }
+
+    @Transactional(readOnly = true)
+    public List<RoomResponseDTO> listRoomsByLinker(Long linkerId, Long meId) {
+        List<ChatRoom> rooms = chatRoomRepository.findByLinker_LinkerIdOrderByCreatedDateDesc(linkerId);
+
+        return rooms.stream()
+            // DM 제외가 필요하면 아래 필터 유지(링커에 DM이 매핑될 일이 없다면 생략 가능)
+            .filter(r -> r.getRoomType() != RoomType.DM)
+            .map(r -> toRoomResponseAllowNonMember(r, meId))
+            .toList();
+    }
+
+    /**
+     * (선택) Linker + 타입 필터 버전
+     */
+    @Transactional(readOnly = true)
+    public List<RoomResponseDTO> listRoomsByLinkerAndType(Long linkerId, RoomType type, Long meId) {
+        List<ChatRoom> rooms = chatRoomRepository.findRoomsByLinkerIdAndOptionalType(linkerId, type);
+        return rooms.stream()
+            .filter(r -> r.getRoomType() != RoomType.DM)
+            .map(r -> toRoomResponseAllowNonMember(r, meId))
+            .toList();
+    }
+
+    /**
+     * 내가 멤버가 아닐 수도 있는 방을 DTO로 변환
+     * - 멤버면 lastRead 기준 unread 계산
+     * - 멤버가 아니면 unread=0
+     * - lastMessage, memberCount는 공통
+     * - linkerId, isMember도 DTO에 세팅(필드가 없다면 DTO에 필드 추가 권장)
+     */
+    private RoomResponseDTO toRoomResponseAllowNonMember(ChatRoom room, Long meId) {
+        boolean isMember = chatPartRepository
+            .findByRoom_RoomIdAndUser_UserId(room.getRoomId(), meId)
+            .isPresent();
+
+        var lastMsg = chatMessageRepository
+            .findTopByRoom_RoomIdOrderByMessageIdDesc(room.getRoomId())
+            .orElse(null);
+
+        int members = (int) chatPartRepository
+            .countByRoom_RoomIdAndLeftDateIsNull(room.getRoomId());
+
+        int unread = 0;
+        if (isMember) {
+            Long lastReadId = chatPartRepository
+                .findByRoom_RoomIdAndUser_UserId(room.getRoomId(), meId)
+                .map(ChatPart::getLastReadMsgId)
+                .orElse(null);
+            unread = computeUnread(room.getRoomId(), lastReadId);
+        }
+
+        // 그룹/클래스 공통 매핑
+        RoomResponseDTO dto = RoomResponseDTO.fromEntity(room, lastMsg, unread, members);
+
+        // ▼ 아래 두 줄은 DTO에 필드가 있을 때만 세팅하세요(없으면 생략)
+        try {
+            // linkerId 내려주기
+            var linker = room.getLinker();
+            var lid = (linker != null ? linker.getLinkerId() : null);
+            // Lombok @Setter 또는 빌더에 필드 없으면 아래 두 줄은 주석 처리
+            dto.setLinkerId(lid);
+            dto.setIsMember(isMember);
+        } catch (Exception ignore) {
+            // DTO에 해당 필드가 없으면 그냥 무시
+        }
+        return dto;
+    }
+
+    @Transactional
+    public RoomResponseDTO joinRoom(Long roomId, Long userId) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+            .orElseThrow(() -> new EntityNotFoundException("Room not found: " + roomId));
+
+        if (room.getRoomType() == RoomType.DM) {
+            throw new IllegalArgumentException("DM room cannot be joined via this API.");
+        }
+
+        // 이미 참여 중인지 확인
+        var existing = chatPartRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
+        if (existing.isPresent()) {
+            ChatPart p = existing.get();
+            // 예: 과거에 나갔다면 복구 (leftDate 컬럼 있으면)
+            if (p.getLeftDate() != null) {
+                p.setLeftDate(null);
+            }
+            // 그대로 메타 포함 응답
+            return toRoomResponseWithMeta(room, userId);
+        }
+
+        // 새 참여자 추가
+        ChatPart newPart = ChatPart.builder()
+            .id(new ChatPartId(roomId, userId))
+            .room(room)
+            .user(userRepository.getReferenceById(userId))
+            .alarm(Alarm.ON)
+            .build();
+        chatPartRepository.save(newPart);
+
+        return toRoomResponseWithMeta(room, userId);
+    }
+
 }

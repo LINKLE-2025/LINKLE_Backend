@@ -86,6 +86,11 @@ public class PostService {
     public PostDTO findById(Long postId) {
         if (postId == null) return null;
         Optional<Post> opt = postRepository.findById(postId);
+        //User같이 보내기
+        opt.get().getUser();
+
+
+
         return opt.map(PostDTO::fromEntity).orElse(null);
     }
 

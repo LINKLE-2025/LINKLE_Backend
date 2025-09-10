@@ -20,6 +20,7 @@ public class RoomResponseDTO {
     private RoomType roomType;
     private String roomName;
     private Long linkerId;
+    private Boolean isMember;
 
     // ===== 그룹/클래스 전용 =====
     private String description;

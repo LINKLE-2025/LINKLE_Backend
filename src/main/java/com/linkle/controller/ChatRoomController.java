@@ -98,6 +98,18 @@ public class ChatRoomController {
         Long me = currentUserId(req);
         return unreadService.unreadSummary(me);
     }
+    /**채팅방 보이게 하기*/
+    @GetMapping("/room/by-linker")
+    public List<RoomResponseDTO> roomsByLinker(@RequestParam Long linkerId, HttpServletRequest req) {
+        Long me = currentUserId(req);
+        return chatRoomService.listRoomsByLinker(linkerId, me);
+    }
+    /**방참가하기*/
+    @PostMapping("/room/{roomId}/join")
+    public RoomResponseDTO join(@PathVariable Long roomId, HttpServletRequest req) {
+        Long me = currentUserId(req);
+        return chatRoomService.joinRoom(roomId, me);
+    }
 
     /** 톡 배경화면 */
     @GetMapping("/view/background/{roomId}")

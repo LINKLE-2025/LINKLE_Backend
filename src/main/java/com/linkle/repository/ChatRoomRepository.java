@@ -24,5 +24,17 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
            """)
     List<ChatRoom> findActiveRoomsByUserId(@Param("userId") Long userId);
 
+    List<ChatRoom> findByLinker_LinkerIdOrderByCreatedDateDesc(Long linkerId);
 
+    @Query("""
+    select r
+    from ChatRoom r
+    where r.linker.linkerId = :linkerId
+      and (:type is null or r.roomType = :type)
+    order by r.createdDate desc
+    """)
+    List<ChatRoom> findRoomsByLinkerIdAndOptionalType(@Param("linkerId") Long linkerId,
+        @Param("type") RoomType type);
+
+    Page<ChatRoom> findByLinker_LinkerId(Long linkerId, Pageable pageable);
 }

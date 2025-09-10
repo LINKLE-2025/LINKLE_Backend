@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
 import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
@@ -57,6 +59,12 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
 
     // 🔹 링크별 유저 참여 여부 체크
     Optional<Participate> findByLinker_LinkerIdAndUser_UserId(Long linkerId, Long userId);
+
+    // 회원 탈퇴를 위한 참여 삭제
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Participate p WHERE p.user.userId = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 
 
 }

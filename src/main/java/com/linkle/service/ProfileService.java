@@ -15,8 +15,11 @@ import com.linkle.domain.dto.ProfilePostDTO;
 import com.linkle.domain.dto.SearchLinkerResponseDTO;
 import com.linkle.domain.entity.Post;
 import com.linkle.domain.entity.User;
+import com.linkle.repository.FriendRepository;
+import com.linkle.repository.LinkerRepository;
 import com.linkle.repository.ParticipateRepository;
 import com.linkle.repository.PostRepository;
+import com.linkle.repository.ReplyRepository;
 import com.linkle.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -40,6 +44,10 @@ public class ProfileService {
     private final ParticipateRepository participateRepository;
     private final S3Client s3Client;
     private final PostRepository postRepository;
+    private final FriendRepository friendRepository;
+    private final LinkerRepository linkerRepository;
+    private final ReplyRepository replyRepository;
+
     // minio 저장소 활용
     @Value("${minio.bucket}")
     private String bucketName;
@@ -100,7 +108,20 @@ public class ProfileService {
     }
 
     // 유저 삭제
+    @Transactional
     public void deleteUserProfile(Long userId) {
+        // 1. 친구 관계 삭제
+        friendRepository.deleteByUserId(userId);
+
+        // 2. 포스트 삭제
+        postRepository.deleteByUserId(userId);
+
+        // 3. 링커 참여 내역 삭제
+        participateRepository.deleteByUserId(userId);
+
+        // 4. reply 삭제
+        replyRepository.deleteByUserId(userId);
+
         userRepository.deleteById(userId);
     }
 

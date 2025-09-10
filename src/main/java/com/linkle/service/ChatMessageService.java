@@ -45,10 +45,10 @@ public class ChatMessageService {
 
         MessageType type = (req.getMessageType() == null) ? MessageType.TEXT : req.getMessageType();
 
-        // ✅ 프록시로 User 채우기 (엔티티 필드는 userId 유지)
+        //  프록시로 User 채우기 (엔티티 필드는 userId 유지)
         User sender = userRepository.getReferenceById(senderUserId);
 
-        // ✅ text만 사용
+        // text만 사용
         String body = req.ensuredText();
 
         ChatMessage saved = chatMessageRepository.save(

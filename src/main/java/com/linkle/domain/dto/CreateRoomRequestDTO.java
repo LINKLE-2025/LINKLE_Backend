@@ -31,7 +31,7 @@ public class CreateRoomRequestDTO {
 
     // ====== 팔레트 색상 코드 (1~7)이지만 s3에 red, orange,yellow,green, blue,purple.png로 저장되어야함 7에는 이미지 저장 로직추가 예정======
     @NotNull(message = "테마 코드는 필수입니다")
-    private Integer themeColor;
+    private String themeColor;
 
     // ====== CLASS 전용 옵션 ======
     @PositiveOrZero(message = "입장료는 0원 이상이어야 합니다")

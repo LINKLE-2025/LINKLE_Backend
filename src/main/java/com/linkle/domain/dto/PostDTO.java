@@ -25,6 +25,8 @@ public class PostDTO {
     private String memo;
     private LocalDateTime createdDate;
     private Long userId;
+    private String name;
+    private String userNickname;
     private Long linkerId;
 
     private LinkerDTO linker;
@@ -38,6 +40,8 @@ public class PostDTO {
             .memo(post.getMemo())
             .createdDate(post.getCreatedDate())
             .userId(post.getUser() != null ? post.getUser().getUserId() : null)
+            .name(post.getUser() != null ? post.getUser().getName() : null)
+            .userNickname(post.getUser() != null ? post.getUser().getNickname() : null)
             .linkerId(post.getLinker() != null ? post.getLinker().getLinkerId() : null)
             .linker(LinkerDTO.fromEntity(post.getLinker()))
             .build();

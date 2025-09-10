@@ -11,8 +11,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DuplicationCheckResponseDTO {
+public class UserPasswordResetDTO {
 
-    private boolean available;
+    private String email;
+    private String password;
 
 }

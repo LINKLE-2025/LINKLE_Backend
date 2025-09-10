@@ -3,6 +3,7 @@ package com.linkle.controller;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -93,6 +94,7 @@ public class PostController {
             byte[] data = profileService.downloadFile(key);
 
             return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore().mustRevalidate()) //이미지 불러올때 캐시 방지
                 .contentType(resolveMediaType(key))
                 .body(data);
         }

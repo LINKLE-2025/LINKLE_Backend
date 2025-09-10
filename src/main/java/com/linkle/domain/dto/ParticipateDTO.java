@@ -22,7 +22,7 @@ public class ParticipateDTO {
     private Long userId;       // User FK
     private Long linkerId;     // Linker FK
     private LocalDate participatedDate;
-
+    private boolean participating; // 참여 여부 반환용
     // Entity → DTO 변환
     public static ParticipateDTO fromEntity(Participate p) {
         if (p == null)

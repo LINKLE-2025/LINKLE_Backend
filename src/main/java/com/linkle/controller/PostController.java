@@ -56,12 +56,10 @@ public class PostController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PostDTO> createPost(
         @RequestParam("linkerId") Long linkerId,
+        @RequestParam("userId")Long userId,
         @RequestParam("content") String content,
         @RequestParam("image") MultipartFile file
     ) throws IOException {
-
-        // TODO: 로그인 붙이면 SecurityContext에서 userId 가져오기
-         Long userId = 1L;
 
         log.info("링커아이디 :  " + linkerId);
 

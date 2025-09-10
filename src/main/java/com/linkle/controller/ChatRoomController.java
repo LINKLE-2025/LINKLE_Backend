@@ -113,6 +113,28 @@ public class ChatRoomController {
             .contentType(resolveMediaType(key))
             .body(data);
     }
+    @GetMapping("/view/color/{name}")
+    public ResponseEntity<byte[]> viewColor(@PathVariable String name) throws IOException {
+        // 1) 입력 검증: 영문 소문자만 허용하고 화이트리스트로 한 번 더 막기
+        String normalized = name.toLowerCase();
+        List<String> allowed = List.of("red", "orange", "yellow", "green", "blue", "purple");
+        if (!normalized.matches("^[a-z]+$") || !allowed.contains(normalized)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // 2) MinIO Key 구성: color/red.png
+        String key = "color/" + normalized + ".png";
+
+        // 3) 다운로드
+        byte[] data = profileService.downloadFile(key);
+
+        // 4) 캐시 헤더(선택)
+        return ResponseEntity.ok()
+            .contentType(resolveMediaType(key))
+            .header("Cache-Control", "public, max-age=86400") // 1일 캐시
+            .body(data);
+    }
+
 
     // ---- helpers ----
     private MediaType resolveMediaType(String key) {

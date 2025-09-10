@@ -23,7 +23,7 @@ public class ChatMessage {
 
     // SYSTEM(서버) 메시지일 때는 NULL
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User userId;
 
     @Enumerated(EnumType.STRING)

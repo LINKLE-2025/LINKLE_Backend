@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class SearchResponseDTO {
+public class SearchUserResponseDTO {
     private Long userId;
     private String name;
     private String nickname;
@@ -20,8 +20,8 @@ public class SearchResponseDTO {
     private String state;
     private String image;
 
-    public static SearchResponseDTO from(User user, Friend friend) {
-        return SearchResponseDTO.builder()
+    public static SearchUserResponseDTO from(User user, Friend friend) {
+        return SearchUserResponseDTO.builder()
             .userId(user.getUserId())
             .name(user.getName())
             .nickname(user.getNickname())

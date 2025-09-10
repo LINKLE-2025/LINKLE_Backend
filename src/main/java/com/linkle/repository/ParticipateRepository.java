@@ -2,6 +2,7 @@
 package com.linkle.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -53,5 +54,9 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
         GROUP BY l.linker_id, l.name, l.category_id, l.memo
         """, nativeQuery = true)
     List<Object[]> findAllWithCountsRaw(@Param("word") String word);
+
+    // 🔹 링크별 유저 참여 여부 체크
+    Optional<Participate> findByLinker_LinkerIdAndUser_UserId(Long linkerId, Long userId);
+
 
 }

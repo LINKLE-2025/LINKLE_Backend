@@ -20,14 +20,18 @@ public class SearchLinkerResponseDTO {
     private Long categoryId;
     private String memo;
     // 채팅방 수
+    private Long chatRoomCount;
     // 포스트 수
+    private Long postCount;
 
-    public static SearchLinkerResponseDTO from(Linker linker, Post post){
+    public static SearchLinkerResponseDTO from(Linker linker, Long chatRoomCount, Long postCount){
         return SearchLinkerResponseDTO.builder()
             .linkerId(linker.getLinkerId())
             .name(linker.getName())
             .categoryId(linker.getCategoryId())
             .memo(linker.getMemo())
+            .chatRoomCount(chatRoomCount)
+            .postCount(postCount)
             .build();
     }
 }

@@ -12,6 +12,7 @@ import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
 import com.linkle.domain.dto.ProfileEditRequestDTO;
 import com.linkle.domain.dto.ProfileEditResponseDTO;
 import com.linkle.domain.dto.ProfilePostDTO;
+import com.linkle.domain.dto.SearchLinkerResponseDTO;
 import com.linkle.domain.entity.Post;
 import com.linkle.domain.entity.User;
 import com.linkle.repository.ParticipateRepository;

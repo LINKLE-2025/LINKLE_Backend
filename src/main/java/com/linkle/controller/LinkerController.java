@@ -8,10 +8,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.linkle.domain.dto.LinkerDTO;
+import com.linkle.domain.dto.ParticipateDTO;
 import com.linkle.service.LinkerService;
 
 import lombok.RequiredArgsConstructor;
@@ -47,6 +49,30 @@ public class LinkerController {
         log.info("메모: {}", linkerDTO.getMemo());
 
         linkerService.createLinker(linkerDTO);
+    }
+
+    // 🔹 참여 여부 체크
+    @GetMapping("/participate/check")
+    public ResponseEntity<ParticipateDTO> checkParticipation(
+        @RequestParam Long linkerId,
+        @RequestParam Long userId) {
+
+        boolean participating = linkerService.isParticipating(linkerId, userId);
+
+        ParticipateDTO dto = ParticipateDTO.builder()
+            .linkerId(linkerId)
+            .userId(userId)
+            .participating(participating)
+            .build();
+
+        return ResponseEntity.ok(dto);
+    }
+
+    // 🔹 참여하기
+    @PostMapping("/participate")
+    public ResponseEntity<String> participate(@RequestBody ParticipateDTO request) {
+        linkerService.addParticipation(request.getLinkerId(), request.getUserId());
+        return ResponseEntity.ok("참여 완료");
     }
 
     @GetMapping

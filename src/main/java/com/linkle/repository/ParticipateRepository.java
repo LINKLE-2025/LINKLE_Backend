@@ -2,6 +2,7 @@
 package com.linkle.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -35,5 +36,8 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
         ORDER BY COUNT(p) DESC
        """)
     List<ProfileLinkerCountDTO> countUserParticipationByCategory(@Param("userId") Long userId);
+
+    // 🔹 링크별 유저 참여 여부 체크
+    Optional<Participate> findByLinker_LinkerIdAndUser_UserId(Long linkerId, Long userId);
 
 }

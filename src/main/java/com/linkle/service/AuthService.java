@@ -3,6 +3,7 @@ package com.linkle.service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.linkle.domain.dto.UserAuthDTO;
 import com.linkle.domain.dto.UserLoginRequestDTO;
 import com.linkle.domain.dto.UserLoginResponseDTO;
 import com.linkle.domain.dto.UserSignupRequestDTO;
@@ -38,13 +39,42 @@ public class AuthService {
         }
 
         // JWT 토큰 생성
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getUserId().toString());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUserId().toString());
 
         // Redis에 Refresh Token 저장
         refreshTokenRepository.save(user.getUserId().toString(), refreshToken);
 
         return new UserLoginResponseDTO(accessToken, refreshToken);
+    }
+
+    // 로그인한 사용자 정보 조회
+    public UserAuthDTO getCurrentUser(Long userId) {
+        // 사용자 조회
+        User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        // UserAuthDTO로 변환하여 반환
+        return UserAuthDTO.builder()
+                    .userId(user.getUserId())
+                    .name(user.getName())
+                    .nickname(user.getNickname())
+                    .age(user.getAge())
+                    .gender(user.getGender())
+                    .image(user.getImage())
+                    .build();
+    }
+
+    // Refresh Token으로 Access Token 재발급
+    public String refreshAccessToken(Long userId, String refreshToken) {
+        // Redis에서 저장된 Refresh Token 조회
+        String storedRefreshToken = refreshTokenRepository.findByUserId(userId.toString())
+            .orElseThrow(() -> new RuntimeException("저장된 Refresh Token이 없습니다."));
+        // Refresh Token 검증
+        if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
+            throw new RuntimeException("유효하지 않은 Refresh Token입니다.");
+        }
+        // 새로운 Access Token 발급
+        return jwtTokenProvider.generateAccessToken(userId.toString());
     }
 
     // 로그아웃
@@ -69,14 +99,27 @@ public class AuthService {
         return true;
     }
 
-    // 이메일 중복 체크
-    public boolean isEmailExists(String email) {
-        return !userRepository.existsByEmail(email);
+        // 이메일 중복 체크
+        public boolean isEmailExists(String email) {
+            return userRepository.existsByEmail(email);
+        }
+
+        // 닉네임 중복 체크
+        public boolean isNicknameExists(String nickname) {
+            return userRepository.existsByNickname(nickname);
     }
 
-    // 닉네임 중복 체크
-    public boolean isNicknameExists(String nickname) {
-        return !userRepository.existsByNickname(nickname);
+    // 비밀번호 재설정
+    public boolean resetPassword(String email, String newPassword) {
+        // 이메일로 사용자 조회
+        User user = userRepository.findByEmail(email)
+                        .orElseThrow(() -> new RuntimeException("존재하지 않는 이메일입니다."));
+        // 새 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        // 비밀번호 업데이트
+        user.setPassword(encodedPassword);
+        userRepository.save(user);
+        return true;
     }
 
 }

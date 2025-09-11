@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,11 +29,8 @@ public class ChatMessageService {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatPartRepository chatPartRepository;
     private final UserRepository userRepository;
-    private final ChatEventProducer eventProducer; // STOMP 발행 유틸
+    private final ChatEventProducer eventProducer;
 
-    /**
-     * 메시지 발송 + 브로드캐스트
-     */
     @Transactional
     public MessageResponseDTO send(SendMessageRequestDTO req, Long senderUserId) {
         ChatRoom room = chatRoomRepository.findById(req.getRoomId())
@@ -45,55 +41,49 @@ public class ChatMessageService {
 
         MessageType type = (req.getMessageType() == null) ? MessageType.TEXT : req.getMessageType();
 
-        //  프록시로 User 채우기 (엔티티 필드는 userId 유지)
         User sender = userRepository.getReferenceById(senderUserId);
-
-        // text만 사용
         String body = req.ensuredText();
 
         ChatMessage saved = chatMessageRepository.save(
             ChatMessage.builder()
                 .room(room)
-                .userId(sender)        // 필드명 userId 유지
+                .userId(sender)
                 .type(type)
-                .text(body)            // DB에도 text
+                .text(body)
                 .build()
         );
 
-        Long sid = saved.getUserId().getUserId();
-        String sname = saved.getUserId().getName();
-        String simg = saved.getUserId().getImage();
-
-        // 브로드캐스트 이벤트도 text
+        // 이벤트 DTO
         MessageCreatedEvent event = MessageCreatedEvent.builder()
             .messageId(saved.getMessageId())
             .roomId(room.getRoomId())
             .messageType(saved.getType())
             .text(saved.getText())
             .createdDate(saved.getCreatedDate())
-            .senderId(sid)
-            .senderName(sname)
-            .senderImage(simg)
+            .senderId(sender.getUserId())
+            .senderName(sender.getName())
+            .senderImage(sender.getImage())
             .build();
+
+        // 방 토픽 브로드캐스트
         eventProducer.messageCreated(event);
 
-        // REST 응답도 text로 맞출 거면 .text(...) 사용
+        // ✅ 유저 단일 토픽 발행 (리스트 갱신)
+        var memberUserIds = chatPartRepository.findUserIdsByRoomId(room.getRoomId());
+        eventProducer.messageCreatedToUsers(event, memberUserIds);
+
         return MessageResponseDTO.builder()
             .messageId(saved.getMessageId())
             .roomId(room.getRoomId())
             .messageType(saved.getType())
-            .text(saved.getText())        // ← content 말고 text로 통일
+            .text(saved.getText())
             .createdDate(saved.getCreatedDate())
-            .senderId(sid)
-            .senderName(sname)
-            .senderImage(simg)
+            .senderId(sender.getUserId())
+            .senderName(sender.getName())
+            .senderImage(sender.getImage())
             .build();
     }
 
-
-    /**
-     * 메시지 목록 조회 (최신 → 과거, beforeId 커서)
-     */
     @Transactional(readOnly = true)
     public List<MessageResponseDTO> listMessages(Long roomId, Long beforeMessageId, int pageSize) {
         Slice<ChatMessage> slice = (beforeMessageId == null)
@@ -101,8 +91,6 @@ public class ChatMessageService {
             : chatMessageRepository.findByRoom_RoomIdAndMessageIdLessThanOrderByMessageIdDesc(
             roomId, beforeMessageId, PageRequest.of(0, pageSize));
 
-        // ManyToOne 기본 fetch(EAGER)라면 추가 로딩 없이 userid 접근 가능.
-        // 만약 LAZY로 바꾸면 fetch join 쿼리로 최적화 필요.
         return slice.getContent().stream()
             .map(m -> {
                 User su = m.getUserId();

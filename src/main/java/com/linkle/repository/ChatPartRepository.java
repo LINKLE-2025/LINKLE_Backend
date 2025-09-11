@@ -2,7 +2,6 @@ package com.linkle.repository;
 
 import com.linkle.domain.entity.ChatPart;
 import com.linkle.domain.entity.ChatPartId;
-
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,7 +13,6 @@ import java.util.Optional;
 public interface ChatPartRepository extends JpaRepository<ChatPart, ChatPartId> {
 
     Optional<ChatPart> findByRoom_RoomIdAndUser_UserId(Long roomId, Long userId);
-
 
     long countByRoom_RoomIdAndLeftDateIsNull(Long roomId);
 
@@ -45,4 +43,13 @@ public interface ChatPartRepository extends JpaRepository<ChatPart, ChatPartId> 
 
     List<ChatPart> findByUser_UserIdAndLeftDateIsNull(Long userId);
 
+    // 방에 남아있는 멤버들의 userId만 뽑기 (리스트 갱신 브로드캐스트용)
+    @Query("""
+           select u.userId
+           from ChatPart cp
+           join cp.user u
+           where cp.room.roomId = :roomId
+             and cp.leftDate is null
+           """)
+    List<Long> findUserIdsByRoomId(@Param("roomId") Long roomId);
 }

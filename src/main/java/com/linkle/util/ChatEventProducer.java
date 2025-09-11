@@ -6,34 +6,41 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 채팅 도메인 이벤트 → STOMP 브로커 발행 어댑터
- *
- * 역할
- * - 서비스 레이어를 브로커/경로/전송방식으로부터 분리
- * - 전송 경로 정책을 한 곳에서 관리 (StompDestinations와 함께 사용)
- * - 향후 전송 수단(예: Redis Pub/Sub, Kafka) 변경 시 여기만 교체
- */
+import java.util.Collection;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ChatEventProducer {
 
-    private final WebSocketBroadcaster ws; // STOMP 세션으로 push 하는 얇은 유틸
+    private final WebSocketBroadcaster ws;
 
     /** 메시지 생성 이벤트 브로드캐스트: /sub/room.{roomId} */
     public void messageCreated(MessageCreatedEvent evt) {
         if (evt == null || evt.getRoomId() == null) return;
         ws.toRoom(evt.getRoomId(), evt);
-        log.debug("Broadcasted MessageCreatedEvent roomId={}, messageId={}", evt.getRoomId(), evt.getMessageId());
+        log.debug("Broadcasted MessageCreatedEvent to room {} -> {}", evt.getRoomId(), evt.getMessageId());
     }
 
     /** 메시지 읽음 이벤트 브로드캐스트: /sub/room.{roomId} */
     public void messageRead(MessageReadEvent evt) {
         if (evt == null || evt.getRoomId() == null) return;
         ws.toRoom(evt.getRoomId(), evt);
-        log.debug("Broadcasted MessageReadEvent roomId={}, readerId={}, lastReadMessageId={}",
-            evt.getRoomId(), evt.getReaderId(), evt.getLastReadMessageId());
+        log.debug("Broadcasted MessageReadEvent to room {} by reader {}", evt.getRoomId(), evt.getReaderId());
     }
 
+    // 유저 단일 토픽으로 메시지 생성 알림
+    public void messageCreatedToUsers(MessageCreatedEvent evt, Collection<Long> memberUserIds) {
+        if (evt == null || evt.getRoomId() == null) return;
+        for (Long uid : memberUserIds) {
+            ws.to(StompDestinations.userRoomUpdates(uid), evt);
+            log.debug("Sent MessageCreatedEvent to user {} -> room {}", uid, evt.getRoomId());
+        }
+    }
+
+    // 유저 단일 토픽으로 읽음 알림 (해당 사용자만)
+    public void messageReadToUser(MessageReadEvent evt, long userId) {
+        ws.to(StompDestinations.userRoomUpdates(userId), evt);
+        log.debug("Sent MessageReadEvent to user {} -> room {}", userId, evt.getRoomId());
+    }
 }

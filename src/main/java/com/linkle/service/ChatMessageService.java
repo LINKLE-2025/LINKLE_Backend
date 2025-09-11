@@ -61,7 +61,7 @@ public class ChatMessageService {
         );
 
         Long sid = saved.getUserId().getUserId();
-        String sname = saved.getUserId().getNickname();
+        String sname = saved.getUserId().getName();
         String simg = saved.getUserId().getImage();
 
         // 브로드캐스트 이벤트도 text

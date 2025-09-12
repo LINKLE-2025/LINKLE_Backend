@@ -27,6 +27,9 @@ import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import java.time.LocalDateTime;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -82,4 +85,16 @@ public class LinkerService {
 
         participateRepository.save(p);
     }
+    
+    // 링커 연장
+    public void extendLinkerCreatedDate(Long linkerId) {
+        Linker linker = linkerRepository.findById(linkerId)
+            .orElseThrow(() -> new RuntimeException("해당 링커를 찾을 수 없습니다."));
+
+        // createdDate를 현재 시각으로 업데이트
+        linker.setCreatedDate(LocalDateTime.now());
+
+        linkerRepository.save(linker);
+    }
+
 }

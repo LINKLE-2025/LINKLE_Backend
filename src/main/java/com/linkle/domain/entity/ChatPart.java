@@ -7,7 +7,6 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "CHAT_PART")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
 public class ChatPart {

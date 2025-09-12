@@ -7,7 +7,6 @@ import java.time.LocalDate;
 
 @Entity
 @Table(
-    name = "PARTICIPATE",
     uniqueConstraints = {
         @UniqueConstraint(columnNames = {"user_id", "linker_id"})
     }

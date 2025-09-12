@@ -74,6 +74,12 @@ public class LinkerController {
         linkerService.addParticipation(request.getLinkerId(), request.getUserId());
         return ResponseEntity.ok("참여 완료");
     }
+    // 🔹 링커 만료일 연장
+    @PostMapping("/{id}/extend")
+    public ResponseEntity<String> extendLinker(@PathVariable("id") Long linkerId) {
+        linkerService.extendLinkerCreatedDate(linkerId);
+        return ResponseEntity.ok("연장 완료");
+    }
 
     @GetMapping
     public ResponseEntity<List<LinkerDTO>> findAll() {

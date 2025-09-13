@@ -9,7 +9,6 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "POST")
 @Getter
 @Setter
 @NoArgsConstructor

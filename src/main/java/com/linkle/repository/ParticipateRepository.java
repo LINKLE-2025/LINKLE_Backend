@@ -41,20 +41,19 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
     List<ProfileLinkerCountDTO> countUserParticipationByCategory(@Param("userId") Long userId);
 
     // 링커 검색
-    @Query(value = """
-        SELECT
-            l.linker_id,
-            l.name,
-            l.category_id,
-            l.memo,
-            COUNT(DISTINCT c.room_id) AS chatRoomCount,
-            COUNT(DISTINCT p.post_id) AS postCount
-        FROM linker l
-        LEFT JOIN post p ON p.linker_id = l.linker_id
-        LEFT JOIN chatting_room c ON c.linker_id = l.linker_id
-        WHERE l.name LIKE :word
-        GROUP BY l.linker_id, l.name, l.category_id, l.memo
-        """, nativeQuery = true)
+    @Query("""
+        SELECT l.linkerId,
+               l.name,
+               l.categoryId,
+               l.memo,
+               COUNT(DISTINCT c.roomId),
+               COUNT(DISTINCT p.postId)
+        FROM Linker l
+        LEFT JOIN l.posts p
+        LEFT JOIN ChatRoom c ON c.linker = l
+        WHERE l.name LIKE %:word%
+        GROUP BY l.linkerId, l.name, l.categoryId, l.memo
+    """)
     List<Object[]> findAllWithCountsRaw(@Param("word") String word);
 
     // 🔹 링크별 유저 참여 여부 체크

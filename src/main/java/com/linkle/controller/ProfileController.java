@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.linkle.domain.dto.ParticipateLinkerResponseDTO;
 import com.linkle.domain.dto.PostDTO;
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
 import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
@@ -38,7 +39,7 @@ public class ProfileController {
 
     //링커 조회
     @PostMapping("/linker/list")
-    public ResponseEntity<List<ProfileParticipateLinkerDTO>> getUserLinker(@RequestBody ProfileEditResponseDTO res) {
+    public ResponseEntity<List<ParticipateLinkerResponseDTO>> getUserLinker(@RequestBody ProfileEditResponseDTO res) {
         return ResponseEntity.ok(profileService.getUserLineker(res.getUserId()));
     }
 

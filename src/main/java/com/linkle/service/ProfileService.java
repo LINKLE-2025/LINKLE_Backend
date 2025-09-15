@@ -5,15 +5,14 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.linkle.domain.dto.LinkerDTO;
-import com.linkle.domain.dto.PostDTO;
+import com.linkle.domain.dto.ParticipateLinkerResponseDTO;
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
 import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
 import com.linkle.domain.dto.ProfileEditRequestDTO;
 import com.linkle.domain.dto.ProfileEditResponseDTO;
 import com.linkle.domain.dto.ProfilePostDTO;
-import com.linkle.domain.dto.SearchLinkerResponseDTO;
-import com.linkle.domain.entity.Post;
+import com.linkle.domain.entity.Linker;
+import com.linkle.domain.entity.LinkerState;
 import com.linkle.domain.entity.User;
 import com.linkle.repository.FriendRepository;
 import com.linkle.repository.LinkerRepository;
@@ -60,8 +59,30 @@ public class ProfileService {
     }
 
     //유저 링커 참여 내역 조회
-    public List<ProfileParticipateLinkerDTO> getUserLineker(Long userId) {
-        return participateRepository.findParticipationsByUserId(userId);
+    public List<ParticipateLinkerResponseDTO> getUserLineker(Long userId) {
+        List<Object[]> results = participateRepository.findParticipationsByUserId(userId);
+        return results.stream()
+            .map(row -> {
+                Long linkerId = ((Number) row[0]).longValue();
+                String name = (String) row[1];
+                Long categoryId = ((Number) row[2]).longValue();
+                String memo = (String) row[3];
+                Long chatRoomCount = ((Number) row[4]).longValue();
+                Long postCount = ((Number) row[5]).longValue();
+                LinkerState state = LinkerState.valueOf((String) row[6]);
+                String address = ((String) row[7]);
+
+                Linker linker = new Linker();
+                linker.setLinkerId(linkerId);
+                linker.setName(name);
+                linker.setCategoryId(categoryId);
+                linker.setMemo(memo);
+                linker.setState((state));
+                linker.setAddress((address));
+
+                return ParticipateLinkerResponseDTO.from(linker, chatRoomCount, postCount);
+            })
+            .toList();
     }
 
     // 유저 링커 참여 통계 조회

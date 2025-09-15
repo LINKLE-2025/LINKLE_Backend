@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
 import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
-import com.linkle.domain.dto.SearchLinkerResponseDTO;
 import com.linkle.domain.entity.Participate;
 
 public interface ParticipateRepository extends JpaRepository<Participate, Long> {
@@ -57,7 +56,7 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
         """, nativeQuery = true)
     List<Object[]> findAllWithCountsRaw(@Param("word") String word);
 
-    // 🔹 링크별 유저 참여 여부 체크
+    // 링크별 유저 참여 여부 체크
     Optional<Participate> findByLinker_LinkerIdAndUser_UserId(Long linkerId, Long userId);
 
     // 회원 탈퇴를 위한 참여 삭제
@@ -65,6 +64,23 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
     @Transactional
     @Query("DELETE FROM Participate p WHERE p.user.userId = :userId")
     void deleteByUserId(@Param("userId") Long userId);
+
+    // 추천 링커 조회
+    @Query(value = """
+        SELECT
+            l.linker_id,
+            l.name,
+            l.category_id,
+            l.memo,
+            COUNT(DISTINCT c.room_id) AS chatRoomCount,
+            COUNT(DISTINCT p.post_id) AS postCount
+        FROM linker l
+        LEFT JOIN post p ON p.linker_id = l.linker_id
+        LEFT JOIN chatting_room c ON c.linker_id = l.linker_id
+        WHERE l.linker_id IN (:ids)
+        GROUP BY l.linker_id, l.name, l.category_id, l.memo
+        """, nativeQuery = true)
+    List<Object[]> findAllWithCountsByIds(@Param("ids") List<Long> ids);
 
 
 }

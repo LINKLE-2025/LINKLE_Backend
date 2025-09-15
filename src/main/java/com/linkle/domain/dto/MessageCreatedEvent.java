@@ -10,13 +10,17 @@ import java.time.Instant;
 /**
  * [브로커 이벤트] 메시지 생성 이벤트
  * - 저장 직후 STOMP 등으로 브로드캐스트할 페이로드
- * - 구독 경로 예: /sub/room.{roomId}
+ * - 구독 경로 예: /sub/room.{roomId}, /sub/users.{userId}.room-updates
  */
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class MessageCreatedEvent {
+
+    @Builder.Default
+    private String type = "MESSAGE_CREATED";   //
 
     // ===== 기본 식별/본문 =====
     private Long messageId;
@@ -30,18 +34,24 @@ public class MessageCreatedEvent {
     private String senderName;
     private String senderImage;
 
+    // ===== 리스트 갱신 호환 필드 =====
+    private Integer unreadCount;   //
+    private String lastMessageDate; // ISO-8601 string (선택)
+
     // ------------------------------------------------------------------
     // 팩토리: 엔티티 -> 이벤트 변환
     // ------------------------------------------------------------------
-    public static MessageCreatedEvent fromEntity(ChatMessage msg) {
+    public static MessageCreatedEvent fromEntity(ChatMessage msg, int unreadCount) {
         if (msg == null) return null;
 
         MessageCreatedEvent.MessageCreatedEventBuilder b = MessageCreatedEvent.builder()
             .messageId(msg.getMessageId())
             .roomId(msg.getRoom().getRoomId())
             .messageType(msg.getType())
-            .text(msg.getText())                 // ChatMessage.getText()
-            .createdDate(msg.getCreatedDate());     // *Date 네이밍 규칙
+            .text(msg.getText())
+            .createdDate(msg.getCreatedDate())
+            .unreadCount(unreadCount)
+            .lastMessageDate(msg.getCreatedDate().toString());
 
         User sender = msg.getUserId();
         if (sender != null) {
@@ -52,8 +62,8 @@ public class MessageCreatedEvent {
         return b.build();
     }
 
-    /** 브로드캐스트 편의 메서드 (저장 직후 그대로 push) */
-    public static MessageCreatedEvent forBroadcast(ChatMessage saved) {
-        return fromEntity(saved);
+    /** 브로드캐스트 편의 메서드 */
+    public static MessageCreatedEvent forBroadcast(ChatMessage saved, int unreadCount) {
+        return fromEntity(saved, unreadCount);
     }
 }

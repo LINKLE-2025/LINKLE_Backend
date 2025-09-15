@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(
-    name = "DM_PAIR",
     uniqueConstraints = {
         @UniqueConstraint(name = "uq_dm_normalized_pair", columnNames = {"smaller_id", "greater_id"})
     }

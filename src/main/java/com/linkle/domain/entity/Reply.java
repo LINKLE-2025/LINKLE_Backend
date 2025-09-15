@@ -6,7 +6,6 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "REPLY")
 @Getter
 @Setter
 @NoArgsConstructor

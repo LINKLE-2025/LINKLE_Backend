@@ -4,29 +4,20 @@ import com.linkle.domain.dto.CreateRoomRequestDTO;
 import com.linkle.domain.dto.OpenDmRequestDTO;
 import com.linkle.domain.dto.RoomResponseDTO;
 import com.linkle.domain.entity.*;
-import com.linkle.repository.ChatMessageRepository;
-import com.linkle.repository.ChatPartRepository;
-import com.linkle.repository.ChatRoomRepository;
-import com.linkle.repository.LinkerRepository;
-import com.linkle.repository.UserRepository;
+import com.linkle.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +27,11 @@ public class ChatRoomService {
     private final ChatPartRepository chatPartRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
-    private final LinkerRepository  linkerRepository;
+    private final LinkerRepository linkerRepository;
+    private final ChatMessageService chatMessageService;
+
+    // DM 단일방 보장용
+    private final DmPairRepository dmPairRepository;
 
     // ===== 이미지 저장소 =====
     private final S3Client s3Client;
@@ -49,19 +44,14 @@ public class ChatRoomService {
         if (req.getRoomType() == RoomType.DM) {
             throw new IllegalArgumentException("DM은 OpenDmRequest를 사용하세요.");
         }
-        Linker linkerRef = null;
-        if (req.getLinkerId() != null) {
-            // 존재 검증을 하고 싶으면 findById + orElseThrow 사용
-            linkerRef = linkerRepository.getReferenceById(req.getLinkerId());
-        }
-
+        var linkerRef = (req.getLinkerId() != null) ? linkerRepository.getReferenceById(req.getLinkerId()) : null;
 
         ChatRoom room = ChatRoom.builder()
             .roomType(req.getRoomType())
             .roomName(req.getRoomName())
             .description(req.getDescription())
             .memo(req.getMemo())
-            .themeColor(String.valueOf(req.getThemeColor())) // 숫자코드 or S3 키 문자열
+            .themeColor(String.valueOf(req.getThemeColor()))
             .entryFee(req.getEntryFee())
             .startDate(req.getStartDate() == null ? null :
                 req.getStartDate().atZone(ZoneId.systemDefault()).toInstant())
@@ -82,7 +72,7 @@ public class ChatRoomService {
         return toRoomResponseWithMeta(saved, ownerUserId);
     }
 
-    /** 1:1 DM 열기/조회 */
+    /** 1:1 DM 열기/조회 — DmPair로 단일 방 보장 */
     @Transactional
     public RoomResponseDTO openDm(OpenDmRequestDTO req, Long meId) {
         Long targetId = req.getTargetUserId();
@@ -90,22 +80,53 @@ public class ChatRoomService {
             throw new IllegalArgumentException("자기 자신과의 DM은 생성할 수 없습니다.");
         }
 
+        // 사용자 로딩
         User me = userRepository.findById(meId)
             .orElseThrow(() -> new EntityNotFoundException("Current user not found: " + meId));
         User partner = userRepository.findById(targetId)
             .orElseThrow(() -> new EntityNotFoundException("Target user not found: " + targetId));
 
-        List<ChatRoom> myRooms = chatRoomRepository.findActiveRoomsByUserId(meId);
-        Optional<ChatRoom> existingDm = myRooms.stream()
-            .filter(r -> r.getRoomType() == RoomType.DM)
-            .filter(r -> chatPartRepository.findActiveByRoomIdWithUser(r.getRoomId())
-                .stream().anyMatch(cp -> cp.getUser().getUserId().equals(targetId)))
-            .findFirst();
+        long s = Math.min(meId, targetId);
+        long g = Math.max(meId, targetId);
 
         ChatRoom dmRoom;
-        if (existingDm.isPresent()) {
-            dmRoom = existingDm.get();
+
+        // 1) pair 조회 (이미 있으면 그 방 재사용)
+        Optional<DmPair> pairOpt = dmPairRepository.findBySmallerIdAndGreaterId(s, g);
+        if (pairOpt.isPresent()) {
+            dmRoom = pairOpt.get().getRoom();
+
+            // 내가 과거에 나갔으면 복구, 없으면 파트 생성
+            var myPartOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(dmRoom.getRoomId(), meId);
+            if (myPartOpt.isPresent()) {
+                ChatPart p = myPartOpt.get();
+                if (p.getLeftDate() != null) {
+                    p.setLeftDate(null);
+                    chatPartRepository.save(p);
+                }
+            } else {
+                ChatPart mePart = ChatPart.builder()
+                    .id(new ChatPartId(dmRoom.getRoomId(), me.getUserId()))
+                    .room(dmRoom)
+                    .user(me)
+                    .alarm(Alarm.ON)
+                    .build();
+                chatPartRepository.save(mePart);
+            }
+
+            // 상대 파트도 보장(이상 상태 대비)
+            var partnerPartOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(dmRoom.getRoomId(), partner.getUserId());
+            if (partnerPartOpt.isEmpty()) {
+                ChatPart partnerPart = ChatPart.builder()
+                    .id(new ChatPartId(dmRoom.getRoomId(), partner.getUserId()))
+                    .room(dmRoom)
+                    .user(partner)
+                    .alarm(Alarm.ON)
+                    .build();
+                chatPartRepository.save(partnerPart);
+            }
         } else {
+            // 2) 없으면 새 방 + pair 생성 (경합 시 유니크 예외 처리)
             dmRoom = chatRoomRepository.save(ChatRoom.builder()
                 .roomType(RoomType.DM)
                 .roomName(null)
@@ -118,15 +139,26 @@ public class ChatRoomService {
                 .user(me)
                 .alarm(Alarm.ON)
                 .build();
-
             ChatPart partnerPart = ChatPart.builder()
                 .id(new ChatPartId(dmRoom.getRoomId(), partner.getUserId()))
                 .room(dmRoom)
                 .user(partner)
                 .alarm(Alarm.ON)
                 .build();
-
             chatPartRepository.saveAll(List.of(mePart, partnerPart));
+
+            try {
+                dmPairRepository.save(DmPair.builder()
+                    .room(dmRoom)
+                    .userAId(meId)
+                    .userBId(targetId)
+                    .build()); // @PrePersist에서 smaller/greater 세팅
+            } catch (DataIntegrityViolationException e) {
+                // 경쟁 상황: 기존 pair 재조회하여 그 방 사용
+                dmRoom = dmPairRepository.findBySmallerIdAndGreaterId(s, g)
+                    .map(DmPair::getRoom)
+                    .orElse(dmRoom);
+            }
         }
 
         return toDmRoomResponse(dmRoom, me.getUserId(), partner);
@@ -145,7 +177,6 @@ public class ChatRoomService {
         return chatRoomRepository.findById(roomId);
     }
 
-
     /** 내가 참여 중인 방 목록 */
     @Transactional(readOnly = true)
     public List<RoomResponseDTO> listMyRooms(Long meId) {
@@ -156,16 +187,44 @@ public class ChatRoomService {
     }
 
     // ============================== 내부 유틸 ==============================
-
     private RoomResponseDTO toRoomResponseWithMeta(ChatRoom room, Long meId) {
         if (room.getRoomType() == RoomType.DM) {
+            // 1) 활성 파트에서 파트너 찾아보기
             List<ChatPart> parts = chatPartRepository.findActiveByRoomIdWithUser(room.getRoomId());
-            ChatPart partnerPart = parts.stream()
-                .filter(p -> !p.getUser().getUserId().equals(meId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("DM 파트너를 찾을 수 없습니다."));
-            User partner = partnerPart.getUser();
-            return toDmRoomResponse(room, meId, partner);
+            User partnerUser = null;
+            for (ChatPart p : parts) {
+                if (!p.getUser().getUserId().equals(meId)) {
+                    partnerUser = p.getUser();
+                    break;
+                }
+            }
+
+            // 2) 못 찾았으면 DmPair로 복구해서 User 로드 (상대가 나간 상태 등)
+            if (partnerUser == null) {
+                DmPair pair = dmPairRepository.findByRoom_RoomId(room.getRoomId())
+                    .orElseThrow(() -> new IllegalStateException("DM pair not found for room " + room.getRoomId()));
+                Long partnerId = Objects.equals(pair.getUserAId(), meId) ? pair.getUserBId() : pair.getUserAId();
+                partnerUser = userRepository.findById(partnerId)
+                    .orElseThrow(() -> new EntityNotFoundException("Partner user not found: " + partnerId));
+            }
+
+            var lastMsg = chatMessageRepository
+                .findTopByRoom_RoomIdOrderByMessageIdDesc(room.getRoomId())
+                .orElse(null);
+            var myPartOpt = chatPartRepository
+                .findByRoom_RoomIdAndUser_UserId(room.getRoomId(), meId);
+            Long lastReadId = myPartOpt.map(ChatPart::getLastReadMsgId).orElse(null);
+            int unread = computeUnread(room.getRoomId(), lastReadId);
+
+            return RoomResponseDTO.fromDm(
+                room,
+                partnerUser.getUserId(),
+                partnerUser.getName(),
+                partnerUser.getImage(),
+                partnerUser.getNickname(),
+                lastMsg,
+                unread
+            );
         } else {
             var lastMsg = chatMessageRepository
                 .findTopByRoom_RoomIdOrderByMessageIdDesc(room.getRoomId())
@@ -212,15 +271,11 @@ public class ChatRoomService {
         List<ChatRoom> rooms = chatRoomRepository.findByLinker_LinkerIdOrderByCreatedDateDesc(linkerId);
 
         return rooms.stream()
-            // DM 제외가 필요하면 아래 필터 유지(링커에 DM이 매핑될 일이 없다면 생략 가능)
             .filter(r -> r.getRoomType() != RoomType.DM)
             .map(r -> toRoomResponseAllowNonMember(r, meId))
             .toList();
     }
 
-    /**
-     * (선택) Linker + 타입 필터 버전
-     */
     @Transactional(readOnly = true)
     public List<RoomResponseDTO> listRoomsByLinkerAndType(Long linkerId, RoomType type, Long meId) {
         List<ChatRoom> rooms = chatRoomRepository.findRoomsByLinkerIdAndOptionalType(linkerId, type);
@@ -230,13 +285,6 @@ public class ChatRoomService {
             .toList();
     }
 
-    /**
-     * 내가 멤버가 아닐 수도 있는 방을 DTO로 변환
-     * - 멤버면 lastRead 기준 unread 계산
-     * - 멤버가 아니면 unread=0
-     * - lastMessage, memberCount는 공통
-     * - linkerId, isMember도 DTO에 세팅(필드가 없다면 DTO에 필드 추가 권장)
-     */
     private RoomResponseDTO toRoomResponseAllowNonMember(ChatRoom room, Long meId) {
         boolean isMember = chatPartRepository
             .findByRoom_RoomIdAndUser_UserId(room.getRoomId(), meId)
@@ -258,23 +306,17 @@ public class ChatRoomService {
             unread = computeUnread(room.getRoomId(), lastReadId);
         }
 
-        // 그룹/클래스 공통 매핑
         RoomResponseDTO dto = RoomResponseDTO.fromEntity(room, lastMsg, unread, members);
-
-        // ▼ 아래 두 줄은 DTO에 필드가 있을 때만 세팅하세요(없으면 생략)
         try {
-            // linkerId 내려주기
             var linker = room.getLinker();
             var lid = (linker != null ? linker.getLinkerId() : null);
-            // Lombok @Setter 또는 빌더에 필드 없으면 아래 두 줄은 주석 처리
             dto.setLinkerId(lid);
             dto.setIsMember(isMember);
-        } catch (Exception ignore) {
-            // DTO에 해당 필드가 없으면 그냥 무시
-        }
+        } catch (Exception ignore) {}
         return dto;
     }
 
+    /** 방 참여(재참여 포함). 그룹/클래스에서만 시스템 메시지 발행 */
     @Transactional
     public RoomResponseDTO joinRoom(Long roomId, Long userId) {
         ChatRoom room = chatRoomRepository.findById(roomId)
@@ -284,30 +326,35 @@ public class ChatRoomService {
             throw new IllegalArgumentException("DM room cannot be joined via this API.");
         }
 
-        // 이미 참여 중인지 확인
         var existing = chatPartRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
+        boolean rejoin = false;
         if (existing.isPresent()) {
             ChatPart p = existing.get();
-            // 예: 과거에 나갔다면 복구 (leftDate 컬럼 있으면)
             if (p.getLeftDate() != null) {
-                p.setLeftDate(null);
+                p.setLeftDate(null);     // 재참여
+                chatPartRepository.save(p);
+                rejoin = true;
             }
-            // 그대로 메타 포함 응답
-            return toRoomResponseWithMeta(room, userId);
+        } else {
+            ChatPart newPart = ChatPart.builder()
+                .id(new ChatPartId(roomId, userId))
+                .room(room)
+                .user(userRepository.getReferenceById(userId))
+                .alarm(Alarm.ON)
+                .build();
+            chatPartRepository.save(newPart);
         }
 
-        // 새 참여자 추가
-        ChatPart newPart = ChatPart.builder()
-            .id(new ChatPartId(roomId, userId))
-            .room(room)
-            .user(userRepository.getReferenceById(userId))
-            .alarm(Alarm.ON)
-            .build();
-        chatPartRepository.save(newPart);
+        // SYSTEM 입장 메시지 (그룹/클래스만)
+        if (room.getRoomType() != RoomType.DM) {
+            String name = userRepository.getReferenceById(userId).getName();
+            chatMessageService.sendSystem(roomId, name + " 님이 입장하였습니다");
+        }
 
         return toRoomResponseWithMeta(room, userId);
     }
 
+    /** 방 나가기. 그룹/클래스에서만 시스템 메시지 발행 */
     @Transactional
     public void leaveRoom(Long roomId, Long userId) {
         ChatRoom room = chatRoomRepository.findById(roomId)
@@ -317,22 +364,21 @@ public class ChatRoomService {
             .findByRoom_RoomIdAndUser_UserId(roomId, userId)
             .orElseThrow(() -> new IllegalStateException("You are not a member of this room."));
 
-        // 이미 나간 상태면 idempotent 하게 통과
-        if (part.getLeftDate() != null) return;
+        if (part.getLeftDate() != null) return; // 이미 나간 상태면 무시
 
-        // 소프트-리브
         part.setLeftDate(Instant.now());
         chatPartRepository.save(part);
 
-        // (선택) 방 정리 정책
-        // 남은 활성 멤버가 0명이면 방 삭제 (원치 않으면 아래 블록 제거)
+        // SYSTEM 퇴장 메시지 (그룹/클래스만)
+        if (room.getRoomType() != RoomType.DM) {
+            String name = userRepository.getReferenceById(userId).getName();
+            chatMessageService.sendSystem(roomId, name + " 님이 퇴장하였습니다");
+        }
+
+        // 남은 멤버 0명이면 방 삭제
         long active = chatPartRepository.countByRoom_RoomIdAndLeftDateIsNull(roomId);
         if (active == 0) {
-            // 연쇄 삭제(cascade) 설정에 맞게 필요 시 message/part 정리 추가
-            // chatMessageRepository.deleteByRoom_RoomId(roomId);
-            // chatPartRepository.deleteByRoom_RoomId(roomId);
             chatRoomRepository.delete(room);
         }
     }
-
 }

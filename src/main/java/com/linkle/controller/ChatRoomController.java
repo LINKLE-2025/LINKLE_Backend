@@ -147,7 +147,7 @@ public class ChatRoomController {
             .body(data);
     }
 
-    @PostMapping("/{roomId}/leave")
+    @PostMapping("room/{roomId}/leave")
     public ResponseEntity<Void> leave(
         @PathVariable Long roomId,
         @RequestHeader("x-user-id") Long meId

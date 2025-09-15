@@ -16,37 +16,46 @@ import org.springframework.web.bind.annotation.RestController;
 import com.linkle.domain.dto.AccountHistoryDTO;
 import com.linkle.domain.dto.PaymentResponseDTO;
 import com.linkle.domain.dto.UserBalanceDTO;
-import com.linkle.service.PortOneService;
 import com.linkle.service.UserBalanceService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/balance")
 @RequiredArgsConstructor
 public class UserBalanceController {
 
     private final UserBalanceService userBalanceService; // UserService에 잔액 조회/차감 로직 구현
-    private final PortOneService portOneService;
 
     @PostMapping("/charge-complete")
     public ResponseEntity<?> chargeComplete(@RequestBody Map<String, Object> body) {
-        String impUid = (String) body.get("imp_uid");
-        int amount = ((Number) body.get("paid_amount")).intValue();
-        Long userId = 1L; // 👉 실제는 로그인 세션/JWT에서 userId 가져오기
+        String paymentId = (String) body.get("paymentId");
+        Long userId = ((Number) body.get("userId")).longValue();
 
-        // 1. 포트원에서 결제 검증
-        String token = portOneService.getAccessToken();
-        PaymentResponseDTO payment = portOneService.getPaymentInfo(token, impUid);
+        log.info("[BACK] chargeComplete 진입 ✅ paymentId={}, userId={}", paymentId, userId);
 
-        if (payment.getAmount() == amount && "paid".equals(payment.getStatus())) {
-            // 2. 사용자 포인트 충전 처리
-            userBalanceService.updateBalance(userId, amount);
-            return ResponseEntity.ok("충전 성공");
+        // 1. 결제내역 조회
+        PaymentResponseDTO payment = userBalanceService.getPaymentInfoV2(paymentId);
+        System.out.println("결제 조회 결과: " + payment);
+
+        String memo = "계좌 충전";
+
+        if ("PAID".equals(payment.getStatus())) {
+            long amount = payment.getAmount().getTotal();
+            long newBalance = userBalanceService.updateBalance(userId, amount, memo);
+            return ResponseEntity.ok(Map.of(
+                "msg", "충전 성공",
+                "balance", newBalance
+            ));
         } else {
-            return ResponseEntity.badRequest().body("결제 검증 실패");
+            return ResponseEntity.badRequest()
+                .body("결제 검증 실패: status=" + payment.getStatus());
         }
     }
+
+
 
     @GetMapping("/{userId}/history")
     public ResponseEntity<List<AccountHistoryDTO>> getHistory(@PathVariable Long userId) {
@@ -73,9 +82,9 @@ public class UserBalanceController {
         @RequestBody Map<String, Long> body
     ) {
         long amount = body.getOrDefault("amount", 0L);
-
+        String memo = "출금합니다";
         try {
-            long newBalance = userBalanceService.updateBalance(userId, amount);
+            long newBalance = userBalanceService.updateBalance(userId, amount,memo);
             return ResponseEntity.ok(Map.of("balance", newBalance));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

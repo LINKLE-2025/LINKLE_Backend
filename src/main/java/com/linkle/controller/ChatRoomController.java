@@ -147,6 +147,15 @@ public class ChatRoomController {
             .body(data);
     }
 
+    @PostMapping("/{roomId}/leave")
+    public ResponseEntity<Void> leave(
+        @PathVariable Long roomId,
+        @RequestHeader("x-user-id") Long meId
+    ) {
+        chatRoomService.leaveRoom(roomId, meId);
+        return ResponseEntity.noContent().build(); // 204
+    }
+
 
     // ---- helpers ----
     private MediaType resolveMediaType(String key) {

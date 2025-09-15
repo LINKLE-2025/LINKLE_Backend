@@ -26,6 +26,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -305,6 +306,33 @@ public class ChatRoomService {
         chatPartRepository.save(newPart);
 
         return toRoomResponseWithMeta(room, userId);
+    }
+
+    @Transactional
+    public void leaveRoom(Long roomId, Long userId) {
+        ChatRoom room = chatRoomRepository.findById(roomId)
+            .orElseThrow(() -> new EntityNotFoundException("Room not found: " + roomId));
+
+        ChatPart part = chatPartRepository
+            .findByRoom_RoomIdAndUser_UserId(roomId, userId)
+            .orElseThrow(() -> new IllegalStateException("You are not a member of this room."));
+
+        // 이미 나간 상태면 idempotent 하게 통과
+        if (part.getLeftDate() != null) return;
+
+        // 소프트-리브
+        part.setLeftDate(Instant.now());
+        chatPartRepository.save(part);
+
+        // (선택) 방 정리 정책
+        // 남은 활성 멤버가 0명이면 방 삭제 (원치 않으면 아래 블록 제거)
+        long active = chatPartRepository.countByRoom_RoomIdAndLeftDateIsNull(roomId);
+        if (active == 0) {
+            // 연쇄 삭제(cascade) 설정에 맞게 필요 시 message/part 정리 추가
+            // chatMessageRepository.deleteByRoom_RoomId(roomId);
+            // chatPartRepository.deleteByRoom_RoomId(roomId);
+            chatRoomRepository.delete(room);
+        }
     }
 
 }

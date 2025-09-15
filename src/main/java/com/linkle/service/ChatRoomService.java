@@ -192,6 +192,7 @@ public class ChatRoomService {
             partner.getUserId(),
             partner.getName(),
             partner.getImage(),
+            partner.getNickname(),
             lastMsg,
             unread
         );

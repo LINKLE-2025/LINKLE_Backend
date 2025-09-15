@@ -54,9 +54,8 @@ public class UserBalanceController {
                 .body("결제 검증 실패: status=" + payment.getStatus());
         }
     }
-
-
-
+    
+    // 결제 히스토리 조회
     @GetMapping("/{userId}/history")
     public ResponseEntity<List<AccountHistoryDTO>> getHistory(@PathVariable Long userId) {
         List<AccountHistoryDTO> historyList = userBalanceService.getHistoryByUserId(userId);
@@ -76,13 +75,13 @@ public class UserBalanceController {
     }
 
     // 2. 잔액 차감
-    @PatchMapping("/{userId}/balance")
+    @PatchMapping("/{userId}/withdraw")
     public ResponseEntity<Map<String, Object>> updateBalance(
         @PathVariable Long userId,
-        @RequestBody Map<String, Long> body
+        @RequestBody Map<String, Object> body
     ) {
-        long amount = body.getOrDefault("amount", 0L);
-        String memo = "출금합니다";
+        long amount = ((Number) body.getOrDefault("amount", 0L)).longValue();
+        String memo = (String) body.getOrDefault("memo", ""); // 메모 추가
         try {
             long newBalance = userBalanceService.updateBalance(userId, amount,memo);
             return ResponseEntity.ok(Map.of("balance", newBalance));

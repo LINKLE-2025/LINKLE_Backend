@@ -41,6 +41,7 @@ public class RoomResponseDTO {
     private Long dmPartnerId;
     private String dmPartnerName;
     private String dmPartnerProfileImageUrl;
+    private String dmPartnerNickname;
 
     // ===== 기본 변환 =====
     public static RoomResponseDTO fromEntity(ChatRoom r) {
@@ -99,6 +100,7 @@ public class RoomResponseDTO {
         Long partnerId,
         String partnerName,
         String partnerProfileImageUrl,
+        String partnerNickname,
         ChatMessage lastMessage,
         Integer unreadCount) {
         RoomResponseDTO base = fromEntity(r);
@@ -108,6 +110,7 @@ public class RoomResponseDTO {
         base.setDmPartnerId(partnerId);
         base.setDmPartnerName(partnerName);
         base.setDmPartnerProfileImageUrl(partnerProfileImageUrl);
+        base.setDmPartnerNickname(partnerNickname);
 
         // DM은 멤버 수 2 고정
         base.setMemberCount(2);

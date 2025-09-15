@@ -20,39 +20,36 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     // findById
 
     // 친구 리스트 (userId만 반환 → 그대로 둠)
-    @Query(value = """
-            SELECT IF(f.user_id1 = :userId, f.user_id2, f.user_id1) AS friend_id
-            FROM FRIEND f
-            WHERE (f.user_id1 = :userId OR f.user_id2 = :userId)
-              AND f.state = 'ACCEPTED'
-        """, nativeQuery = true)
+    @Query("""
+        SELECT CASE WHEN f.user1.userId = :userId THEN f.user2.userId ELSE f.user1.userId END
+        FROM Friend f
+        WHERE (f.user1.userId = :userId OR f.user2.userId = :userId)
+          AND f.state = 'ACCEPTED'
+    """)
     List<Long> findAllFriendIds(@Param("userId") Long userId);
 
     // 받은 요청 조회 (내가 user2일 때)
-    @Query(value = """
-            SELECT *
-            FROM FRIEND f
-            WHERE f.user_id2 = :userId
-              AND f.state = 'REQUESTED'
-        """, nativeQuery = true)
+    @Query("""
+        SELECT f FROM Friend f
+        WHERE f.user2.userId = :userId
+          AND f.state = 'REQUESTED'
+    """)
     List<Friend> findReceivedFriendRequests(@Param("userId") Long userId);
 
     // 보낸 요청 조회 (내가 user1일 때)
-    @Query(value = """
-        SELECT *
-        FROM FRIEND f
-        WHERE f.user_id1 = :userId
+    @Query("""
+        SELECT f FROM Friend f
+        WHERE f.user1.userId = :userId
           AND f.state = 'REQUESTED'
-    """, nativeQuery = true)
+    """)
     List<Friend> findSentFriendRequests(@Param("userId") Long userId);
 
     // 요청 수락(update)
-    @Query(value = """
-            SELECT *
-            FROM FRIEND f
-            WHERE f.friend_id = :friendId
-              AND f.state = 'REQUESTED'
-        """, nativeQuery = true)
+    @Query("""
+        SELECT f FROM Friend f
+        WHERE f.friendId = :friendId
+          AND f.state = 'REQUESTED'
+    """)
     Optional<Friend> findReceivedFriend(@Param("friendId") Long friendId);
 
     // 요청 거절(delete)

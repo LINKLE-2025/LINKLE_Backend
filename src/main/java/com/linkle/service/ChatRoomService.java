@@ -66,6 +66,7 @@ public class ChatRoomService {
             .room(saved)
             .user(userRepository.getReferenceById(ownerUserId))
             .alarm(Alarm.ON)
+            .joinedDate(Instant.now()) // ★ 최초 참여 시점 기록
             .build();
         chatPartRepository.save(ownerPart);
 
@@ -102,6 +103,7 @@ public class ChatRoomService {
                 ChatPart p = myPartOpt.get();
                 if (p.getLeftDate() != null) {
                     p.setLeftDate(null);
+                    p.setJoinedDate(Instant.now());   // 재입장 시 갱신
                     chatPartRepository.save(p);
                 }
             } else {
@@ -110,6 +112,7 @@ public class ChatRoomService {
                     .room(dmRoom)
                     .user(me)
                     .alarm(Alarm.ON)
+                    .joinedDate(Instant.now())        // 신규 생성 시각
                     .build();
                 chatPartRepository.save(mePart);
             }
@@ -122,6 +125,7 @@ public class ChatRoomService {
                     .room(dmRoom)
                     .user(partner)
                     .alarm(Alarm.ON)
+                    .joinedDate(Instant.now())        // ★ 누락 대비
                     .build();
                 chatPartRepository.save(partnerPart);
             }
@@ -138,12 +142,14 @@ public class ChatRoomService {
                 .room(dmRoom)
                 .user(me)
                 .alarm(Alarm.ON)
+                .joinedDate(Instant.now())            // ★ 최초 참여
                 .build();
             ChatPart partnerPart = ChatPart.builder()
                 .id(new ChatPartId(dmRoom.getRoomId(), partner.getUserId()))
                 .room(dmRoom)
                 .user(partner)
                 .alarm(Alarm.ON)
+                .joinedDate(Instant.now())            // ★ 최초 참여
                 .build();
             chatPartRepository.saveAll(List.of(mePart, partnerPart));
 
@@ -327,13 +333,12 @@ public class ChatRoomService {
         }
 
         var existing = chatPartRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
-        boolean rejoin = false;
         if (existing.isPresent()) {
             ChatPart p = existing.get();
             if (p.getLeftDate() != null) {
-                p.setLeftDate(null);     // 재참여
+                p.setLeftDate(null);                 // 재참여
+                p.setJoinedDate(Instant.now());      // ★ 재입장 시간 갱신
                 chatPartRepository.save(p);
-                rejoin = true;
             }
         } else {
             ChatPart newPart = ChatPart.builder()
@@ -341,6 +346,7 @@ public class ChatRoomService {
                 .room(room)
                 .user(userRepository.getReferenceById(userId))
                 .alarm(Alarm.ON)
+                .joinedDate(Instant.now())           // ★ 신규 참여 시점
                 .build();
             chatPartRepository.save(newPart);
         }

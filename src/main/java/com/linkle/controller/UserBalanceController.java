@@ -34,20 +34,21 @@ public class UserBalanceController {
         String impUid = (String) body.get("imp_uid");
         int amount = ((Number) body.get("paid_amount")).intValue();
         Long userId = 1L; // 👉 실제는 로그인 세션/JWT에서 userId 가져오기
-
+        String memo = "계좌 충전";
         // 1. 포트원에서 결제 검증
         String token = portOneService.getAccessToken();
         PaymentResponseDTO payment = portOneService.getPaymentInfo(token, impUid);
 
         if (payment.getAmount() == amount && "paid".equals(payment.getStatus())) {
             // 2. 사용자 포인트 충전 처리
-            userBalanceService.updateBalance(userId, amount);
+            userBalanceService.updateBalance(userId, amount,memo);
             return ResponseEntity.ok("충전 성공");
         } else {
             return ResponseEntity.badRequest().body("결제 검증 실패");
         }
     }
-
+    
+    // 결제 히스토리 조회
     @GetMapping("/{userId}/history")
     public ResponseEntity<List<AccountHistoryDTO>> getHistory(@PathVariable Long userId) {
         List<AccountHistoryDTO> historyList = userBalanceService.getHistoryByUserId(userId);
@@ -67,15 +68,16 @@ public class UserBalanceController {
     }
 
     // 2. 잔액 차감
-    @PatchMapping("/{userId}/balance")
+    @PatchMapping("/{userId}/withdraw")
     public ResponseEntity<Map<String, Object>> updateBalance(
         @PathVariable Long userId,
-        @RequestBody Map<String, Long> body
+        @RequestBody Map<String, Object> body
     ) {
-        long amount = body.getOrDefault("amount", 0L);
+        long amount = ((Number) body.getOrDefault("amount", 0L)).longValue();
+        String memo = (String) body.getOrDefault("memo", ""); // 메모 추가
 
         try {
-            long newBalance = userBalanceService.updateBalance(userId, amount);
+            long newBalance = userBalanceService.updateBalance(userId, amount,memo);
             return ResponseEntity.ok(Map.of("balance", newBalance));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

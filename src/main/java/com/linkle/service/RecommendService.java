@@ -64,7 +64,7 @@ public class RecommendService {
                     String memo = (String) row[3];
                     Long chatRoomCount = ((Number) row[4]).longValue();
                     Long postCount = ((Number) row[5]).longValue();
-                    LinkerState state = LinkerState.valueOf((String) row[6]);
+                    LinkerState state = (LinkerState) row[6];
                     String address = ((String) row[7]);
 
                     Linker linker = new Linker();

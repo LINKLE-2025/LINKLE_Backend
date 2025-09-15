@@ -12,7 +12,8 @@ public class MemberResponseDTO {
 
     private Long userId;
     private String name;
-    private String image;        // 프로필 이미지
+    private String image;
+    private String nickname;
 
     public static MemberResponseDTO fromEntity(ChatPart part) {
         if (part == null) return null;
@@ -21,6 +22,7 @@ public class MemberResponseDTO {
             .userId(u.getUserId())
             .name(u.getName())
             .image(u.getImage())
+            .nickname(u.getNickname())
             .build();
     }
 

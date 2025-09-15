@@ -9,8 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.linkle.domain.dto.SearchLinkerResponseDTO;
+import com.linkle.domain.dto.ParticipateLinkerResponseDTO;
 import com.linkle.domain.entity.Linker;
+import com.linkle.domain.entity.LinkerState;
 import com.linkle.repository.ParticipateRepository;
 import lombok.RequiredArgsConstructor;
 
@@ -28,7 +29,7 @@ public class RecommendService {
     @Value("${recommend.flask.recommend-path}")
     private String recommendPath;
 
-    public List<SearchLinkerResponseDTO> getRecommend(Long userId) {
+    public List<ParticipateLinkerResponseDTO> getRecommend(Long userId) {
         try {
             // Flask 기반 추천 API 불러오기
             String flaskUrl = flaskBaseUrl + recommendPath + "?user_id=" + userId;
@@ -43,6 +44,7 @@ public class RecommendService {
             }
 
             List<Object[]> results = participateRepository.findAllWithCountsByIds(linkerIds);
+            System.out.println(results);
             // row 배열에서 값 꺼내기
             /*
             *row[0] → linker_id
@@ -51,6 +53,8 @@ public class RecommendService {
             * row[3] → memo
             * row[4] → chatRoomCount
             * row[5] → postCount
+            * row[6] -> state
+            * row[7] -> address
             * */
             return results.stream()
                 .map(row -> {
@@ -60,14 +64,18 @@ public class RecommendService {
                     String memo = (String) row[3];
                     Long chatRoomCount = ((Number) row[4]).longValue();
                     Long postCount = ((Number) row[5]).longValue();
+                    LinkerState state = LinkerState.valueOf((String) row[6]);
+                    String address = ((String) row[7]);
 
                     Linker linker = new Linker();
                     linker.setLinkerId(linkerId);
                     linker.setName(name);
                     linker.setCategoryId(categoryId);
                     linker.setMemo(memo);
+                    linker.setState((state));
+                    linker.setAddress((address));
 
-                    return SearchLinkerResponseDTO.from(linker, chatRoomCount, postCount);
+                    return ParticipateLinkerResponseDTO.from(linker, chatRoomCount, postCount);
                 })
                 .toList();
 

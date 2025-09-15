@@ -32,7 +32,7 @@ public class UserBalanceService {
     /**
      * 잔액 차감 (amount < 0: 차감, amount > 0: 충전)
      */
-    public long updateBalance(Long userId, long amount) {
+    public long updateBalance(Long userId, long amount, String memo) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("유저가 존재하지 않습니다."));
 
@@ -45,7 +45,6 @@ public class UserBalanceService {
         userRepository.save(user);
 
         // 💡 입출금 내역 기록 남기기
-        String memo = amount > 0 ? "입금" : "출금";
         AccountHistory history = AccountHistory.builder()
             .amount(amount)
             .memo(memo)

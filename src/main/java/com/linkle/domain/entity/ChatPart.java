@@ -1,8 +1,6 @@
 package com.linkle.domain.entity;
 
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import jakarta.persistence.*;
 import java.time.Instant;
 
@@ -22,19 +20,24 @@ public class ChatPart {
     @MapsId("userId")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;  // ✅ 이제 part.getUser() 가능
+    private User user;
 
-    @CreationTimestamp
-    @Column(name = "joined_date", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(3)")
+    // ➜ updatable=false 제거, @CreationTimestamp 제거
+    @Column(name = "joined_date", nullable = false, columnDefinition = "TIMESTAMP(3)")
     private Instant joinedDate;
 
     @Column(name = "left_date", columnDefinition = "TIMESTAMP(3)")
     private Instant leftDate;
 
     @Column(name = "last_read_msg_id")
-    private Long lastReadMsgId; // 필요 시 ManyToOne 매핑 가능
+    private Long lastReadMsgId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "alarm", nullable = false)
     private Alarm alarm = Alarm.ON;
+
+    @PrePersist
+    void prePersist() {
+        if (joinedDate == null) joinedDate = Instant.now();
+    }
 }

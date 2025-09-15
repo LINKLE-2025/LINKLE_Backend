@@ -78,10 +78,14 @@ public class ChatRoomController {
 
     /** 특정 방의 메시지 목록 */
     @GetMapping("/room/{roomId}/messages")
-    public List<MessageResponseDTO> roomMessages(@PathVariable Long roomId,
+    public List<MessageResponseDTO> roomMessages(
+        @PathVariable Long roomId,
         @RequestParam(required = false) Long beforeId,
-        @RequestParam(defaultValue = "20") int size) {
-        return chatMessageService.listMessages(roomId, beforeId, size);
+        @RequestParam(required = false, defaultValue = "20") Integer size,
+        @RequestHeader("x-user-id") Long meId  // ★ 추가
+    ) {
+        int pageSize = (size == null || size <= 0) ? 20 : size;
+        return chatMessageService.listMessages(roomId, meId, beforeId, pageSize); // ★ meId 전달
     }
 
     /** 읽음 동기화 */
@@ -147,7 +151,7 @@ public class ChatRoomController {
             .body(data);
     }
 
-    @PostMapping("/{roomId}/leave")
+    @PostMapping("room/{roomId}/leave")
     public ResponseEntity<Void> leave(
         @PathVariable Long roomId,
         @RequestHeader("x-user-id") Long meId

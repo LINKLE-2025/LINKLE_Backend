@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.linkle.domain.dto.SearchLinkerResponseDTO;
+import com.linkle.domain.dto.ParticipateLinkerResponseDTO;
 import com.linkle.domain.dto.SearchUserResponseDTO;
 import com.linkle.service.SearchService;
 
@@ -31,10 +31,10 @@ public class SearchController {
     }
 
     @GetMapping("/linker")
-    public ResponseEntity<List<SearchLinkerResponseDTO>> searchLinkers(@RequestParam("word") String word) {
+    public ResponseEntity<List<ParticipateLinkerResponseDTO>> searchLinkers(@RequestParam("word") String word) {
         word = "%" + word + "%";
         System.out.println(word);
-        List<SearchLinkerResponseDTO> result = searchService.getAllLinkersByName(word);
+        List<ParticipateLinkerResponseDTO> result = searchService.getAllLinkersByName(word);
         return ResponseEntity.ok(result);
     }
 

@@ -1,9 +1,19 @@
 package com.linkle.service;
 
-import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
+import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import com.linkle.domain.dto.AccountHistoryDTO;
+import com.linkle.domain.dto.PaymentResponseDTO;
 import com.linkle.domain.dto.UserBalanceDTO;
+import com.linkle.domain.entity.AccountHistory;
 import com.linkle.domain.entity.User;
+import com.linkle.repository.AccountHistoryRepository;
 import com.linkle.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
@@ -13,19 +23,24 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional
 public class UserBalanceService {
-
     private final UserRepository userRepository;
+    private final AccountHistoryRepository accountHistoryRepository;
+
+    @Value("${PORTONE_API_SECRET}")
+    private String apiSecret;
+
 
     public UserBalanceDTO getUserById(Long userId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("유저가 존재하지 않습니다."));
+
         return new UserBalanceDTO(user.getUserId(), user.getBalance());
     }
 
     /**
      * 잔액 차감 (amount < 0: 차감, amount > 0: 충전)
      */
-    public long updateBalance(Long userId, long amount) {
+    public long updateBalance(Long userId, long amount, String memo) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("유저가 존재하지 않습니다."));
 
@@ -36,6 +51,44 @@ public class UserBalanceService {
 
         user.setBalance(newBalance);
         userRepository.save(user);
+
+        // 💡 입출금 내역 기록 남기기
+        AccountHistory history = AccountHistory.builder()
+            .amount(amount)
+            .memo(memo)
+            .createdDate(LocalDateTime.now())
+            .user(user)
+            .build();
+        accountHistoryRepository.save(history);
+
         return newBalance;
+    }
+
+    /**
+     * 유저별 입출금 내역 조회
+     */
+    public List<AccountHistoryDTO> getHistoryByUserId(Long userId) {
+        List<AccountHistory> histories = accountHistoryRepository.findByUser_UserIdOrderByCreatedDateDesc(userId);
+        return histories.stream()
+            .map(AccountHistoryDTO::fromEntity)
+            .toList();
+    }
+
+    /**
+     * V2 결제 조회
+     */
+    public PaymentResponseDTO getPaymentInfoV2(String paymentId) {
+        System.out.println("PortOne API Secret 확인: " + apiSecret); // ✅ 값 제대로 들어오는지 확인
+
+        WebClient client = WebClient.builder()
+            .baseUrl("https://api.portone.io")
+            .defaultHeader(HttpHeaders.AUTHORIZATION, "PortOne " + apiSecret) // ✅ 시크릿 토큰
+            .build();
+
+        return client.get()
+            .uri("/payments/" + paymentId)
+            .retrieve()
+            .bodyToMono(PaymentResponseDTO.class)
+            .block();
     }
 }

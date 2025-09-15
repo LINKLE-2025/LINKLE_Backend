@@ -68,7 +68,7 @@ public class UserBalanceController {
     }
 
     // 2. 잔액 차감
-    @PatchMapping("/{userId}/balance")
+    @PatchMapping("/{userId}/withdraw")
     public ResponseEntity<Map<String, Object>> updateBalance(
         @PathVariable Long userId,
         @RequestBody Map<String, Object> body

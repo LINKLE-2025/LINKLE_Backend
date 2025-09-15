@@ -28,7 +28,7 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
             l.address
         FROM linker l
         LEFT JOIN post p ON p.linker_id = l.linker_id
-        LEFT JOIN chatting_room c ON c.linker_id = l.linker_id
+        LEFT JOIN chat_room c ON c.linker_id = l.linker_id
         LEFT JOIN participate pt on pt.linker_id = l.linker_id
         WHERE pt.user_id = :userId
         GROUP BY l.linker_id, l.name, l.category_id, l.memo
@@ -61,7 +61,7 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
             l.address
         FROM linker l
         LEFT JOIN post p ON p.linker_id = l.linker_id
-        LEFT JOIN chatting_room c ON c.linker_id = l.linker_id
+        LEFT JOIN chat_room c ON c.linker_id = l.linker_id
         WHERE l.name LIKE :word
                 AND l.state != 'DELETED'
         GROUP BY l.linker_id, l.name, l.category_id, l.memo
@@ -90,7 +90,7 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
             l.address
         FROM linker l
         LEFT JOIN post p ON p.linker_id = l.linker_id
-        LEFT JOIN chatting_room c ON c.linker_id = l.linker_id
+        LEFT JOIN chat_room c ON c.linker_id = l.linker_id
         WHERE l.linker_id IN (:ids)
         GROUP BY l.linker_id, l.name, l.category_id, l.memo
         """, nativeQuery = true)

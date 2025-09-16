@@ -54,7 +54,52 @@ public class UserBalanceController {
                 .body("결제 검증 실패: status=" + payment.getStatus());
         }
     }
-    
+
+    /**
+     * PC QR 결제 등에서 프론트 redirect 불가 시,
+     * 서버에서 바로 결제 상태 확인하고 DB 반영
+     */
+    @PostMapping("/charge")
+    public ResponseEntity<?> charge(@RequestBody Map<String, Object> body) {
+        String paymentId = (String) body.get("paymentId");
+        Object userIdObj = body.get("userId");
+        Long userId;
+
+        if (userIdObj instanceof Number n) {
+            userId = n.longValue();
+        } else if (userIdObj instanceof String s) {
+            userId = Long.parseLong(s);
+        } else {
+            throw new IllegalArgumentException("userId 값이 잘못되었습니다.");
+        }
+
+        log.info("[BACK] charge 진입 ✅ paymentId={}, userId={}", paymentId, userId);
+
+        // 1️⃣ 결제 상태 조회
+        PaymentResponseDTO payment = userBalanceService.getPaymentInfoV2(paymentId);
+        log.info("결제 조회 결과: {}", payment);
+
+        if (!"PAID".equals(payment.getStatus())) {
+            return ResponseEntity.badRequest()
+                .body(Map.of(
+                    "msg", "결제 미완료",
+                    "status", payment.getStatus()
+                ));
+        }
+
+        // 2️⃣ DB에 잔액 반영
+        long amount = payment.getAmount().getTotal();
+        String memo = "계좌 충전";
+        long newBalance = userBalanceService.updateBalance(userId, amount, memo);
+
+        return ResponseEntity.ok(Map.of(
+            "msg", "충전 성공",
+            "balance", newBalance
+        ));
+    }
+
+
+
     // 결제 히스토리 조회
     @GetMapping("/{userId}/history")
     public ResponseEntity<List<AccountHistoryDTO>> getHistory(@PathVariable Long userId) {

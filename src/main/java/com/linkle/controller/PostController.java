@@ -30,7 +30,7 @@ public class PostController {
     @PutMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Long> updatePost(
         @PathVariable Long postId,
-        @RequestPart("content") String content,  // 문자열도 multipart part로 받음
+        @RequestParam(value = "content", required = false) String content,
         @RequestPart(value = "image", required = false) MultipartFile file // 선택적 이미지 파일
     ) throws IOException {
         Long updatedId = postService.updatePost(postId, content, file);

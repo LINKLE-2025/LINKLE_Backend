@@ -109,9 +109,7 @@ public class PostService {
             .orElseThrow(() -> new RuntimeException("Post가 없습니다"));
 
         // 텍스트(memo) 업데이트
-        if (content != null && !content.trim().isEmpty()) {
             post.setMemo(content);
-        }
 
         // 이미지 업데이트
         if (file != null && !file.isEmpty()) {

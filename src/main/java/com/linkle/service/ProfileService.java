@@ -15,6 +15,7 @@ import com.linkle.domain.entity.Linker;
 import com.linkle.domain.entity.LinkerState;
 import com.linkle.domain.entity.User;
 import com.linkle.repository.ChatPartRepository;
+import com.linkle.repository.DmPairRepository;
 import com.linkle.repository.FriendRepository;
 import com.linkle.repository.LinkerRepository;
 import com.linkle.repository.ParticipateRepository;
@@ -50,6 +51,7 @@ public class ProfileService {
     private final ReplyRepository replyRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatPartRepository chatPartRepository;
+    private final DmPairRepository dmPairRepository;
 
     // minio 저장소 활용
     @Value("${minio.bucket}")
@@ -152,6 +154,8 @@ public class ProfileService {
         // 5.2 chat_part 삭제
         chatPartRepository.deleteByUserId(userId);
 
+        // 5.3 dmpair 삭제
+        dmPairRepository.deleteAllByUserId(userId);
 
         // 6. 유저 삭제
         userRepository.deleteById(userId);

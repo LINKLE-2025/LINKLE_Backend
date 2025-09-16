@@ -2,6 +2,8 @@ package com.linkle.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.linkle.domain.dto.ParticipateLinkerResponseDTO;
@@ -23,43 +25,43 @@ public class SearchService {
     private final FriendRepository friendRepository;
     private final ParticipateRepository participateRepository;
 
-    public List<SearchUserResponseDTO> searchUsersWithFriendStatus(String word, Long currentUserId) {
-        List<User> users = friendRepository.searchByNicknameOrName(word);
+    public Page<SearchUserResponseDTO> searchUsersWithFriendStatus(
+        String word,
+        Long currentUserId,
+        Pageable pageable
+    ) {
+        Page<User> users = friendRepository.searchByNicknameOrName(word, pageable);
 
-        return users.stream()
-            .map(user -> {
-                Friend friend = friendRepository.findByUserPair(currentUserId, user.getUserId());
-                return SearchUserResponseDTO.from(user, friend);
-            })
-            .toList();
+        return users.map(user -> {
+            Friend friend = friendRepository.findByUserPair(currentUserId, user.getUserId());
+            return SearchUserResponseDTO.from(user, friend);
+        });
     }
 
-    public List<ParticipateLinkerResponseDTO> getAllLinkersByName(String word) {
+    public Page<ParticipateLinkerResponseDTO> getAllLinkersByName(String word, Pageable pageable) {
+        Page<Object[]> results = participateRepository.findAllWithCountsRaw(word, pageable);
 
-        List<Object[]> results = participateRepository.findAllWithCountsRaw(word);
+        return results.map(row -> {
+            Long linkerId = ((Number) row[0]).longValue();
+            String name = (String) row[1];
+            Long categoryId = ((Number) row[2]).longValue();
+            String memo = (String) row[3];
+            Long chatRoomCount = ((Number) row[4]).longValue();
+            Long postCount = ((Number) row[5]).longValue();
+            LinkerState state = (LinkerState) row[6];
+            String address = (String) row[7];
 
-        return results.stream()
-            .map(row -> {
-                Long linkerId = ((Number) row[0]).longValue();
-                String name = (String) row[1];
-                Long categoryId = ((Number) row[2]).longValue();
-                String memo = (String) row[3];
-                Long chatRoomCount = ((Number) row[4]).longValue();
-                Long postCount = ((Number) row[5]).longValue();
-                LinkerState state = (LinkerState) row[6];
-                String address = ((String) row[7]);
+            Linker linker = new Linker();
+            linker.setLinkerId(linkerId);
+            linker.setName(name);
+            linker.setCategoryId(categoryId);
+            linker.setMemo(memo);
+            linker.setState(state);
+            linker.setAddress(address);
 
-                Linker linker = new Linker();
-                linker.setLinkerId(linkerId);
-                linker.setName(name);
-                linker.setCategoryId(categoryId);
-                linker.setMemo(memo);
-                linker.setState((state));
-                linker.setAddress((address));
-
-                return ParticipateLinkerResponseDTO.from(linker, chatRoomCount, postCount);
-            })
-            .toList();
+            return ParticipateLinkerResponseDTO.from(linker, chatRoomCount, postCount);
+        });
     }
+
 
 }

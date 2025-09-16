@@ -34,7 +34,7 @@ public class UserBalanceService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("유저가 존재하지 않습니다."));
 
-        return new UserBalanceDTO(user.getUserId(), user.getBalance());
+        return new UserBalanceDTO(user.getUserId(), user.getBalance(), user.getAccountNumber(), user.getBankId());
     }
 
     /**

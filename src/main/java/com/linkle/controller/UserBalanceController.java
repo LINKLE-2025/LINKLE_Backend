@@ -135,4 +135,35 @@ public class UserBalanceController {
                 .body(Map.of("error", e.getMessage()));
         }
     }
+
+    // 3. 계좌 정보 수정
+    @PatchMapping("/{userId}/update")
+    public ResponseEntity<Map<String, Object>> updateAccount(
+        @PathVariable Long userId,
+        @RequestBody Map<String, Object> body
+    ) {
+        try {
+            String accountNumber = (String) body.get("accountNumber");
+            Integer bankId = (body.get("bankId") != null) ? ((Number) body.get("bankId")).intValue() : null;
+
+            if (accountNumber == null || bankId == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "accountNumber와 bankId 모두 필요합니다."));
+            }
+
+            UserBalanceDTO updatedUser = userBalanceService.updateAccountInfo(userId, accountNumber, bankId);
+
+            return ResponseEntity.ok(Map.of(
+                "msg", "계좌 정보 수정 성공",
+                "user", updatedUser
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "서버 에러: " + e.getMessage()));
+        }
+    }
+
 }

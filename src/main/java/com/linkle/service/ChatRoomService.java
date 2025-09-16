@@ -5,7 +5,10 @@ import com.linkle.domain.dto.OpenDmRequestDTO;
 import com.linkle.domain.dto.RoomResponseDTO;
 import com.linkle.domain.entity.*;
 import com.linkle.repository.*;
+
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -376,6 +379,9 @@ public class ChatRoomService {
     }
 
 
+    @PersistenceContext
+    private EntityManager em;
+
     /** 방 나가기. 그룹/클래스에서만 시스템 메시지 발행 */
     @Transactional
     public void leaveRoom(Long roomId, Long userId) {
@@ -386,20 +392,22 @@ public class ChatRoomService {
             .findByRoom_RoomIdAndUser_UserId(roomId, userId)
             .orElseThrow(() -> new IllegalStateException("You are not a member of this room."));
 
-        if (part.getLeftDate() != null) return; // 이미 나간 상태면 무시
+        if (part.getLeftDate() != null) return;
 
         part.setLeftDate(Instant.now());
         chatPartRepository.save(part);
 
-        // SYSTEM 퇴장 메시지 (그룹/클래스만)
         if (room.getRoomType() != RoomType.DM) {
             String name = userRepository.getReferenceById(userId).getName();
             chatMessageService.sendSystem(roomId, name + " 님이 퇴장하였습니다");
         }
 
-        // 남은 멤버 0명이면 방 삭제
+        // 카운트 정확히 보기 위해 플러시
+        em.flush();
+
         long active = chatPartRepository.countByRoom_RoomIdAndLeftDateIsNull(roomId);
         if (active == 0) {
+            // 부모만 삭제하면 ChatPart/ChatMessage/DmPair도 함께 제거됨
             chatRoomRepository.delete(room);
         }
     }

@@ -5,19 +5,17 @@ import lombok.*;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor @Builder
 public class ChatRoom {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "room_id")
     private Long roomId;
 
@@ -38,7 +36,7 @@ public class ChatRoom {
     private String themeColor;
 
     @Column(name = "owner_id")
-    private Long ownerId; // 그룹 방 소유자 (DM이면 NULL)
+    private Long ownerId;
 
     @Column(name = "entry_fee")
     private Integer entryFee;
@@ -53,4 +51,13 @@ public class ChatRoom {
     @ManyToOne
     @JoinColumn(name = "linker_id")
     private Linker linker;
+
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ChatPart> parts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ChatMessage> messages = new ArrayList<>();
+
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<DmPair> dmPairs = new ArrayList<>();
 }

@@ -295,6 +295,7 @@ public class ChatRoomService {
     private RoomResponseDTO toRoomResponseAllowNonMember(ChatRoom room, Long meId) {
         boolean isMember = chatPartRepository
             .findByRoom_RoomIdAndUser_UserId(room.getRoomId(), meId)
+            .filter(p -> p.getLeftDate() == null)   // leftDate 체크 추가
             .isPresent();
 
         var lastMsg = chatMessageRepository
@@ -318,10 +319,11 @@ public class ChatRoomService {
             var linker = room.getLinker();
             var lid = (linker != null ? linker.getLinkerId() : null);
             dto.setLinkerId(lid);
-            dto.setIsMember(isMember);
+            dto.setIsMember(isMember); // 정확한 isMember 전달
         } catch (Exception ignore) {}
         return dto;
     }
+
 
     /** 방 참여(재참여 포함). 그룹/클래스에서만 시스템 메시지 발행 */
     @Transactional
@@ -333,33 +335,46 @@ public class ChatRoomService {
             throw new IllegalArgumentException("DM room cannot be joined via this API.");
         }
 
-        var existing = chatPartRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
-        if (existing.isPresent()) {
-            ChatPart p = existing.get();
-            if (p.getLeftDate() != null) {
-                p.setLeftDate(null);                 // 재참여
-                p.setJoinedDate(Instant.now());      // ★ 재입장 시간 갱신
-                chatPartRepository.save(p);
+        var existingOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(roomId, userId);
+
+        boolean joinedNow = false;
+
+        if (existingOpt.isPresent()) {
+            ChatPart p = existingOpt.get();
+
+            // 이미 참여중이면 아무 것도 하지 않고 조용히 반환 (중복 알림 방지)
+            if (p.getLeftDate() == null) {
+                return toRoomResponseWithMeta(room, userId);
             }
+
+            // 재참여
+            p.setLeftDate(null);
+            p.setJoinedDate(Instant.now());
+            chatPartRepository.save(p);
+            joinedNow = true;
+
         } else {
+            // 신규 참여
             ChatPart newPart = ChatPart.builder()
                 .id(new ChatPartId(roomId, userId))
                 .room(room)
                 .user(userRepository.getReferenceById(userId))
                 .alarm(Alarm.ON)
-                .joinedDate(Instant.now())           // ★ 신규 참여 시점
+                .joinedDate(Instant.now())
                 .build();
             chatPartRepository.save(newPart);
+            joinedNow = true;
         }
 
-        // SYSTEM 입장 메시지 (그룹/클래스만)
-        if (room.getRoomType() != RoomType.DM) {
+        //실제로 '지금' 참여(신규/재참여)한 경우에만 시스템 메시지
+        if (joinedNow && room.getRoomType() != RoomType.DM) {
             String name = userRepository.getReferenceById(userId).getName();
             chatMessageService.sendSystem(roomId, name + " 님이 입장하였습니다");
         }
 
         return toRoomResponseWithMeta(room, userId);
     }
+
 
     /** 방 나가기. 그룹/클래스에서만 시스템 메시지 발행 */
     @Transactional

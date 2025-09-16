@@ -4,6 +4,8 @@ package com.linkle.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -93,10 +95,10 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     @Query("""
             SELECT u
             FROM User u
-            WHERE u.nickname LIKE %:word%
-               OR u.name LIKE %:word%
+            WHERE u.nickname LIKE :word
+               OR u.name LIKE :word
         """)
-    List<User> searchByNicknameOrName(@Param("word") String word);
+    Page<User> searchByNicknameOrName(@Param("word") String word, Pageable pageable);
 
     // 회원 탈퇴를 위한 친구 삭제
     @Modifying

@@ -108,7 +108,7 @@ public class UserBalanceController {
     }
 
 
-    // 1. 유저 정보 조회 (잔액 포함)
+    // 1. 유저 정보 조회 (잔액, 계좌번호)
     @GetMapping("/{userId}")
     public ResponseEntity<UserBalanceDTO> getUser(@PathVariable Long userId) {
         UserBalanceDTO user = userBalanceService.getUserById(userId);

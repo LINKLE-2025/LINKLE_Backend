@@ -213,7 +213,7 @@ public class ChatRoomController {
                     long afterMe = userBalanceService.updateBalance(
                         me,
                         -fee,
-                        (room.getRoomName() != null ? room.getRoomName() : "") + " 입장료 출금"
+                        (room.getRoomName() != null ? room.getRoomName() : "") + " 입장료 차감"
                     );
                     long afterOwner = userBalanceService.updateBalance(
                         ownerId,

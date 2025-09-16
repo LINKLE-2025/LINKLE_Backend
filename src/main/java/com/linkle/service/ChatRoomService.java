@@ -256,18 +256,21 @@ public class ChatRoomService {
             String partnerNameForDto;
             String partnerImageForDto;
             String partnerNickForDto;
+            String partnerGenderForDto;
 
             if (partnerUser != null) {
                 partnerIdForDto   = partnerUser.getUserId();
                 partnerNameForDto = partnerUser.getName();
                 partnerImageForDto= partnerUser.getImage();
                 partnerNickForDto = partnerUser.getNickname();
+                partnerGenderForDto = partnerUser.getGender();
             } else {
                 // 프론트가 안전하게 처리하도록 0/placeholder 사용
                 partnerIdForDto   = 0L;
                 partnerNameForDto = "(탈퇴한 사용자)";
                 partnerImageForDto= null;
                 partnerNickForDto = null;
+                partnerGenderForDto = null;
             }
 
             var lastMsg = chatMessageRepository
@@ -284,6 +287,7 @@ public class ChatRoomService {
                 partnerNameForDto,
                 partnerImageForDto,
                 partnerNickForDto,
+                partnerGenderForDto,
                 lastMsg,
                 unread
             );
@@ -316,6 +320,7 @@ public class ChatRoomService {
             partner.getName(),
             partner.getImage(),
             partner.getNickname(),
+            partner.getGender(),
             lastMsg,
             unread
         );

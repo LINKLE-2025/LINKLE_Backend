@@ -14,6 +14,7 @@ public class MemberResponseDTO {
     private String name;
     private String image;
     private String nickname;
+    private String gender;
 
     public static MemberResponseDTO fromEntity(ChatPart part) {
         if (part == null) return null;
@@ -23,6 +24,7 @@ public class MemberResponseDTO {
             .name(u.getName())
             .image(u.getImage())
             .nickname(u.getNickname())
+            .gender(u.getGender())
             .build();
     }
 

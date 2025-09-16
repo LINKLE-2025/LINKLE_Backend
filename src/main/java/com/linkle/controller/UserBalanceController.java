@@ -1,3 +1,4 @@
+
 package com.linkle.controller;
 
 import java.util.List;
@@ -119,6 +120,7 @@ public class UserBalanceController {
         return ResponseEntity.ok(user);
     }
 
+
     // 2. 잔액 차감
     @PatchMapping("/{userId}/withdraw")
     public ResponseEntity<Map<String, Object>> updateBalance(
@@ -163,6 +165,39 @@ public class UserBalanceController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "서버 에러: " + e.getMessage()));
+        }
+    }
+
+
+    // 4. 다른 사용자에게 송금
+    @PatchMapping("/{fromUserId}/transfer/{toUserId}")
+    public ResponseEntity<Map<String, Object>> transfer(
+        @PathVariable Long fromUserId,
+        @PathVariable Long toUserId,
+        @RequestBody Map<String, Object> body
+    ) {
+        long amount = ((Number) body.getOrDefault("amount", 0L)).longValue();
+        String memo = (String) body.getOrDefault("memo", "송금");
+
+        if (amount <= 0) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "송금 금액은 0보다 커야 합니다."));
+        }
+
+        try {
+            // 송신자 출금
+            userBalanceService.updateBalance(fromUserId, -amount, "송금 → " + toUserId);
+
+            // 수신자 입금
+            long newBalanceReceiver = userBalanceService.updateBalance(toUserId, amount, "입금 ← " + fromUserId);
+
+            return ResponseEntity.ok(Map.of(
+                "msg", "송금 성공",
+                "receiverBalance", newBalanceReceiver
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", e.getMessage()));
         }
     }
 

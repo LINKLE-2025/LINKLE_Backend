@@ -1,5 +1,7 @@
 package com.linkle.service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -8,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linkle.domain.dto.ParticipateLinkerResponseDTO;
 import com.linkle.domain.entity.Linker;
@@ -29,15 +32,27 @@ public class RecommendService {
     @Value("${recommend.flask.recommend-path}")
     private String recommendPath;
 
-    public List<ParticipateLinkerResponseDTO> getRecommend(Long userId) {
+    public List<ParticipateLinkerResponseDTO> getRecommend(Long userId, String address_detail) {
         try {
-            // Flask 기반 추천 API 불러오기
-            String flaskUrl = flaskBaseUrl + recommendPath + "?user_id=" + userId;
+            // 주소 인코딩
+            // String encodedAddress = URLEncoder.encode(address_detail, StandardCharsets.UTF_8);
+
+            // Flask URL 맞춤 (address → address_detail)
+            String flaskUrl = flaskBaseUrl + recommendPath
+                + "?user_id=" + userId
+                + "&address_detail=" + address_detail;
+
             ResponseEntity<String> response = restTemplate.getForEntity(flaskUrl, String.class);
 
             // 응답 결과
-            Map<String, List<Long>> result = objectMapper.readValue(response.getBody(), Map.class);
-            List<Long> linkerIds = result.get("linker_ids");
+            Map<String, List<Integer>> result = objectMapper.readValue(
+                response.getBody(),
+                new TypeReference<>() {}
+            );
+            List<Long> linkerIds = result.get("linker_ids").stream()
+                .map(Long::valueOf)
+                .toList();
+            // List<Long> linkerIds = result.get("linker_ids");
 
             if (linkerIds == null || linkerIds.isEmpty()) {
                 return List.of();

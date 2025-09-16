@@ -4,6 +4,7 @@ import com.linkle.domain.entity.ChatPart;
 import com.linkle.domain.entity.ChatPartId;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,7 +20,6 @@ public interface ChatPartRepository extends JpaRepository<ChatPart, ChatPartId> 
     @EntityGraph(attributePaths = {"user"})
     List<ChatPart> findByRoom_RoomIdAndLeftDateIsNull(Long roomId);
 
-    // 멤버 리스트용: User를 한 번에 로딩 (N+1 방지)
     @Query("""
            select cp
            from ChatPart cp
@@ -29,7 +29,6 @@ public interface ChatPartRepository extends JpaRepository<ChatPart, ChatPartId> 
            """)
     List<ChatPart> findActiveByRoomIdWithUser(@Param("roomId") Long roomId);
 
-    // 특정 메시지를 읽은 사람 수 (읽음 마크용)
     @Query("""
            select count(cp)
            from ChatPart cp
@@ -43,7 +42,6 @@ public interface ChatPartRepository extends JpaRepository<ChatPart, ChatPartId> 
 
     List<ChatPart> findByUser_UserIdAndLeftDateIsNull(Long userId);
 
-    // 방에 남아있는 멤버들의 userId만 뽑기 (리스트 갱신 브로드캐스트용)
     @Query("""
            select u.userId
            from ChatPart cp
@@ -52,4 +50,23 @@ public interface ChatPartRepository extends JpaRepository<ChatPart, ChatPartId> 
              and cp.leftDate is null
            """)
     List<Long> findUserIdsByRoomId(@Param("roomId") Long roomId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM chat_part WHERE user_id = :uid", nativeQuery = true)
+    int deleteByUserId(long uid);
+
+    // (선택) 별칭
+    default Optional<ChatPart> findByRoomIdAndUserId(Long roomId, Long userId) {
+        return findByRoom_RoomIdAndUser_UserId(roomId, userId);
+    }
+
+    @Query("""
+       select cp
+       from ChatPart cp
+       join fetch cp.user u
+       where cp.room.roomId = :roomId
+       """)
+    List<ChatPart> findAllByRoomIdWithUser(@Param("roomId") Long roomId);
+
+
 }

@@ -23,39 +23,50 @@ public class ChatReadService {
 
     @Transactional
     public void syncRead(ReadSyncRequestDTO req, Long readerUserId) {
-        ChatPart part = chatPartRepository
-            .findByRoom_RoomIdAndUser_UserId(req.getRoomId(), readerUserId)
-            .orElseThrow(() -> new IllegalStateException("Not a member of room: " + req.getRoomId()));
+        // 더 이상 예외를 던지지 않음. 방 멤버가 아니면 조용히 무시.
+        Optional<ChatPart> partOpt =
+            chatPartRepository.findByRoom_RoomIdAndUser_UserId(req.getRoomId(), readerUserId);
 
-        // (권장) lastReadMessageId가 해당 방의 메시지인지 검증
-        Optional<ChatMessage> optMsg = chatMessageRepository
-            .findById(req.getLastReadMessageId())
-            .filter(m -> m.getRoom().getRoomId().equals(req.getRoomId()));
-
-        // 증가 방향으로만 갱신
-        Long current = part.getLastReadMsgId();
-        if (current == null || req.getLastReadMessageId() > current) {
-            part.setLastReadMsgId(req.getLastReadMessageId());
+        if (partOpt.isEmpty()) {
+            // 로그만 남기고 종료 (운영 안정성)
+            // log.debug("syncRead ignored: user {} not a member of room {}", readerUserId, req.getRoomId());
+            return;
         }
 
-        // 읽은 사람 수 (UI 마크용) — 필요 없다면 0으로 두어도 됨
-        // long readBy = chatPartRepository.countReadersOfMessage(req.getRoomId(), part.getLastReadMsgId());
+        ChatPart part = partOpt.get();
 
-        // 이벤트 구성
+        // (옵션) lastReadMessageId가 해당 방의 메시지인지 검증하고, 아니면 무시
+        Optional<ChatMessage> optMsg = Optional.empty();
+        if (req.getLastReadMessageId() != null) {
+            optMsg = chatMessageRepository.findById(req.getLastReadMessageId())
+                .filter(m -> m.getRoom().getRoomId().equals(req.getRoomId()));
+        }
+
+        // 증가 방향으로만 갱신
+        if (req.getLastReadMessageId() != null) {
+            Long current = part.getLastReadMsgId();
+            if (current == null || req.getLastReadMessageId() > current) {
+                // 메시지가 해당 방 소속이 아니면 갱신하지 않음
+                if (optMsg.isPresent()) {
+                    part.setLastReadMsgId(req.getLastReadMessageId());
+                }
+            }
+        }
+
+        // 이벤트 구성 (roomUnreadCount/readByCount는 필요 시 계산해서 넣거나 0 유지)
         MessageReadEvent evt = MessageReadEvent.of(
             req.getRoomId(),
             readerUserId,
             part.getLastReadMsgId(),
-            0,              // roomUnreadCount (선택)
-            0               // readByCount (선택)
+            0, // roomUnreadCount (선택)
+            0  // readByCount (선택)
         );
-        // 선택: lastMessageDate 채우기 (프론트의 when 폴백에 도움)
+        // 프론트 시간 폴백 보강
         optMsg.ifPresent(m -> evt.setLastMessageDate(m.getCreatedDate().toString()));
 
-        // 방 토픽 브로드캐스트(방 안 UI용)
+        // 방 토픽 브로드캐스트(방 UI)
         eventProducer.messageRead(evt);
-
-        // ✅ 유저 단일 토픽에도 발행 (리스트 갱신용; 프론트는 type/unreadCount로 처리)
+        // 유저 단일 토픽에도 발행 (리스트 갱신)
         eventProducer.messageReadToUser(evt, readerUserId);
     }
 }

@@ -14,4 +14,6 @@ import lombok.Setter;
 public class UserBalanceDTO {
     private Long userId;
     private Long balance;
+    private String accountNumber;
+    private int bankId;
 }

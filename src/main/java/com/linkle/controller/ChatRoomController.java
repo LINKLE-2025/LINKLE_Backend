@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -37,6 +38,7 @@ public class ChatRoomController {
 
     // S3/MinIO 다운로드 재사용
     private final ProfileService profileService;
+    private final UserBalanceService userBalanceService;
 
     /** 그룹/클래스 방 생성 */
     @PostMapping("/room")
@@ -108,12 +110,7 @@ public class ChatRoomController {
         Long me = currentUserId(req);
         return chatRoomService.listRoomsByLinker(linkerId, me);
     }
-    /**방참가하기*/
-    @PostMapping("/room/{roomId}/join")
-    public RoomResponseDTO join(@PathVariable Long roomId, HttpServletRequest req) {
-        Long me = currentUserId(req);
-        return chatRoomService.joinRoom(roomId, me);
-    }
+
 
     /** 톡 배경화면 */
     @GetMapping("/view/background/{roomId}")
@@ -179,4 +176,77 @@ public class ChatRoomController {
         }
         return 1L; // 개발용 기본값
     }
+
+
+
+    /** 방참가하기 */
+    @PostMapping("/room/{roomId}/join")
+    public ResponseEntity<?> join(@PathVariable Long roomId, HttpServletRequest req) {
+        Long me = currentUserId(req);
+
+        System.out.println("💡 [JOIN] 송금하기 백단으로 왔나? userId=" + me);
+
+        // 1. 톡방 정보 조회
+        ChatRoom room = chatRoomRepository.findById(roomId)
+            .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 방입니다."));
+
+        System.out.println("💡 roomType=" + room.getRoomType() +
+            ", entryFee=" + room.getEntryFee() +
+            ", ownerId=" + room.getOwnerId());
+
+        Long newBalance = null;
+
+        // 2. 클래스 톡방이면 입장료 송금
+        if (room.getRoomType() != null && "CLASS".equalsIgnoreCase(String.valueOf(room.getRoomType()))) {
+            int fee = room.getEntryFee() != null ? room.getEntryFee() : 0;
+
+            if (fee > 0) {
+                Long ownerId = room.getOwnerId();
+                if (ownerId == null) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "error", "방 주인이 설정되지 않은 클래스 방입니다."
+                    ));
+                }
+
+                try {
+                    // 송금 (참여자 → 방 주인)
+                    long afterMe = userBalanceService.updateBalance(
+                        me,
+                        -fee,
+                        (room.getRoomName() != null ? room.getRoomName() : "") + " 클래스 톡방 입장료 출금"
+                    );
+                    long afterOwner = userBalanceService.updateBalance(
+                        ownerId,
+                        fee,
+                        (room.getRoomName() != null ? room.getRoomName() : "") + " 클래스 톡방 입장료 입금"
+                    );
+
+                    System.out.println("💡 balance 업데이트 완료: 참여자=" + afterMe + ", 방주인=" + afterOwner);
+
+                    // 참가자 새 잔액 확인
+                    newBalance = afterMe;
+
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "error", "잔액 부족으로 입장 불가",
+                        "need", fee
+                    ));
+                }
+            }
+        }
+
+        // 3. 참가 처리
+        RoomResponseDTO dto = chatRoomService.joinRoom(roomId, me);
+
+        // 4. 응답 생성
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("msg", "입장 성공");
+        response.put("room", dto);
+        if (newBalance != null) {
+            response.put("balance", newBalance);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
 }

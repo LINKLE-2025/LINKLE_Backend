@@ -5,5 +5,5 @@ import com.linkle.domain.entity.Linker;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LinkerRepository extends JpaRepository<Linker, Long> {
-
+    boolean existsByName(String name);
 }

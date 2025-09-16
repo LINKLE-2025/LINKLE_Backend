@@ -14,12 +14,15 @@ import com.linkle.domain.dto.ProfilePostDTO;
 import com.linkle.domain.entity.Linker;
 import com.linkle.domain.entity.LinkerState;
 import com.linkle.domain.entity.User;
+import com.linkle.repository.ChatPartRepository;
 import com.linkle.repository.FriendRepository;
 import com.linkle.repository.LinkerRepository;
 import com.linkle.repository.ParticipateRepository;
 import com.linkle.repository.PostRepository;
 import com.linkle.repository.ReplyRepository;
 import com.linkle.repository.UserRepository;
+// ✅ 추가
+import com.linkle.repository.ChatMessageRepository;
 
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -46,6 +49,8 @@ public class ProfileService {
     private final FriendRepository friendRepository;
     private final LinkerRepository linkerRepository;
     private final ReplyRepository replyRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatPartRepository chatPartRepository;
 
     // minio 저장소 활용
     @Value("${minio.bucket}")
@@ -104,7 +109,6 @@ public class ProfileService {
             .toList();
     }
 
-
     // 유저 수정
     public ProfileEditResponseDTO updateUserProfile(Long userId, ProfileEditRequestDTO dto) {
         User user = userRepository.findById(userId)
@@ -143,6 +147,14 @@ public class ProfileService {
         // 4. reply 삭제
         replyRepository.deleteByUserId(userId);
 
+        // 5.1 메시지 작성자 → 0 치환 (FK 제거 후 항상 성공)
+        chatMessageRepository.reassignMessagesToDeleted(userId);
+
+        // 5.2 chat_part 삭제
+        chatPartRepository.deleteByUserId(userId);
+
+
+        // 6. 유저 삭제
         userRepository.deleteById(userId);
     }
 
@@ -212,5 +224,4 @@ public class ProfileService {
             return obj.readAllBytes();
         }
     }
-
 }

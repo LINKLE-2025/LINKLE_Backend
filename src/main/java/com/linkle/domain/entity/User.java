@@ -1,15 +1,10 @@
 package com.linkle.domain.entity;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -69,10 +64,13 @@ public class User {
     private String accountNumber;
 
     @Column(name = "balance")
-    private  Long balance;
+    private Long balance;
 
     @Column(name = "created_date", nullable = false)
     private LocalDate createdDate;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<AccountHistory> accountHistories = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

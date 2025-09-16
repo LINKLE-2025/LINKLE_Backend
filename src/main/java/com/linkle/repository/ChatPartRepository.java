@@ -4,6 +4,7 @@ import com.linkle.domain.entity.ChatPart;
 import com.linkle.domain.entity.ChatPartId;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -52,4 +53,10 @@ public interface ChatPartRepository extends JpaRepository<ChatPart, ChatPartId> 
              and cp.leftDate is null
            """)
     List<Long> findUserIdsByRoomId(@Param("roomId") Long roomId);
+
+    // 유저가 참가한 모든 참여행 삭제 (조인 테이블은 '0 치환'보다 삭제가 안전)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM chat_part WHERE user_id = :uid", nativeQuery = true)
+    int deleteByUserId(long uid);
+
 }

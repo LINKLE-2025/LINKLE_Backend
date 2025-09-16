@@ -77,5 +77,8 @@ public class User {
     @PrePersist
     protected void onCreate() {
         this.createdDate = LocalDate.now();
+        if (this.balance == null) {  // balance가 null이면 0으로 설정
+            this.balance = 0L;
+        }
     }
 }

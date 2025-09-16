@@ -21,7 +21,6 @@ import com.linkle.repository.ParticipateRepository;
 import com.linkle.repository.PostRepository;
 import com.linkle.repository.ReplyRepository;
 import com.linkle.repository.UserRepository;
-// ✅ 추가
 import com.linkle.repository.ChatMessageRepository;
 
 import lombok.RequiredArgsConstructor;

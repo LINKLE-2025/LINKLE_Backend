@@ -86,8 +86,34 @@ public class ProfileService {
     }
 
     // 유저 링커 참여 통계 조회
-    public List<ProfileLinkerCountDTO> getUserCount(Long userId) {
-        return participateRepository.countUserParticipationByCategory(userId);
+    // public List<ProfileLinkerCountDTO> getUserCount(Long userId) {
+    //     return participateRepository.countUserParticipationByCategory(userId);
+    // }
+
+    public List<ParticipateLinkerResponseDTO> getUserCount(Long userId) {
+        List<Object[]> results = participateRepository.findAllWithCountsByIdsState(userId);
+        return results.stream()
+            .map(row -> {
+                Long linkerId = ((Number) row[0]).longValue();
+                String name = (String) row[1];
+                Long categoryId = ((Number) row[2]).longValue();
+                String memo = (String) row[3];
+                Long chatRoomCount = ((Number) row[4]).longValue();
+                Long postCount = ((Number) row[5]).longValue();
+                LinkerState state = (LinkerState) row[6];
+                String address = ((String) row[7]);
+
+                Linker linker = new Linker();
+                linker.setLinkerId(linkerId);
+                linker.setName(name);
+                linker.setCategoryId(categoryId);
+                linker.setMemo(memo);
+                linker.setState((state));
+                linker.setAddress((address));
+
+                return ParticipateLinkerResponseDTO.from(linker, chatRoomCount, postCount);
+            })
+            .toList();
     }
 
     // 유저 포스트 조회

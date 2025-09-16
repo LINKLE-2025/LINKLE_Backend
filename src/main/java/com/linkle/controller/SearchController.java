@@ -1,7 +1,9 @@
 package com.linkle.controller;
 
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,20 +24,26 @@ public class SearchController {
     private final SearchService searchService;
 
     @GetMapping("/user")
-    public ResponseEntity<List<SearchUserResponseDTO>> searchByNicknameOrName(
+    public ResponseEntity<?> searchByNicknameOrName(
         @RequestParam("word") String word,
-        @RequestParam("currentUserId") Long currentUserId
+        @RequestParam("currentUserId") Long currentUserId,
+        @PageableDefault(size = 10) Pageable pageable
     ) {
-        List<SearchUserResponseDTO> dtos = searchService.searchUsersWithFriendStatus(word, currentUserId);
-        return ResponseEntity.ok(dtos);
+        word = "%" + word + "%";
+        return ResponseEntity.ok(
+            searchService.searchUsersWithFriendStatus(word, currentUserId, pageable)
+        );
     }
 
     @GetMapping("/linker")
-    public ResponseEntity<List<ParticipateLinkerResponseDTO>> searchLinkers(@RequestParam("word") String word) {
+    public ResponseEntity<?> searchLinkers(
+        @RequestParam("word") String word,
+        @PageableDefault(size = 10) Pageable pageable
+    ) {
         word = "%" + word + "%";
-        System.out.println(word);
-        List<ParticipateLinkerResponseDTO> result = searchService.getAllLinkersByName(word);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(
+            searchService.getAllLinkersByName(word, pageable)
+        );
     }
 
 }

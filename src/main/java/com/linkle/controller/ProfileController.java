@@ -45,7 +45,7 @@ public class ProfileController {
 
     //링커 통계 조회
     @PostMapping("/linker/history")
-    public ResponseEntity<List<ProfileLinkerCountDTO>> getUserCount(@RequestBody ProfileEditResponseDTO res) {
+    public ResponseEntity<List<ParticipateLinkerResponseDTO>> getUserCount(@RequestBody ProfileEditResponseDTO res) {
         return ResponseEntity.ok(profileService.getUserCount(res.getUserId()));
     }
 

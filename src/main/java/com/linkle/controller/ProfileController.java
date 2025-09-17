@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.linkle.domain.dto.CategoryStatsDTO;
 import com.linkle.domain.dto.ParticipateLinkerResponseDTO;
 import com.linkle.domain.dto.PostDTO;
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
@@ -45,10 +46,9 @@ public class ProfileController {
 
     //링커 통계 조회
     @PostMapping("/linker/history")
-    public ResponseEntity<List<ParticipateLinkerResponseDTO>> getUserCount(@RequestBody ProfileEditResponseDTO res) {
-        return ResponseEntity.ok(profileService.getUserCount(res.getUserId()));
+    public ResponseEntity<List<CategoryStatsDTO>> getUserCategoryStats(@RequestBody ProfileEditResponseDTO res) {
+        return ResponseEntity.ok(profileService.getUserCategoryStats(res.getUserId()));
     }
-
 
 
     // 유저 수정

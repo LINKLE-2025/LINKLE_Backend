@@ -11,8 +11,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.linkle.domain.dto.CategoryStatsDTO;
 import com.linkle.domain.dto.ProfileLinkerCountDTO;
-import com.linkle.domain.dto.ProfileParticipateLinkerDTO;
 import com.linkle.domain.entity.Participate;
 
 public interface ParticipateRepository extends JpaRepository<Participate, Long> {
@@ -50,22 +50,21 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
     List<ProfileLinkerCountDTO> countUserParticipationByCategory(@Param("userId") Long userId);
 
     @Query("""
-            SELECT l.linkerId,
-                   l.name,
-                   l.categoryId,
-                   l.memo,
-                   COUNT(DISTINCT c.roomId),
-                   COUNT(DISTINCT p.postId),
-                   l.state,
-                   l.address
+            SELECT new com.linkle.domain.dto.CategoryStatsDTO(
+                l.categoryId,
+                COUNT(DISTINCT l.linkerId),
+                COUNT(CASE WHEN p.user.userId = :userId THEN 1 END),
+                COUNT(CASE WHEN cp.user.userId = :userId THEN 1 END)
+            )
             FROM Participate pt
             JOIN pt.linker l
-            LEFT JOIN l.posts p
+            LEFT JOIN Post p ON p.linker = l
             LEFT JOIN ChatRoom c ON c.linker = l
-            WHERE pt.user.userId = :userId AND p.user.userId = :userId
+            LEFT JOIN ChatPart cp ON cp.room = c
+            WHERE pt.user.userId = :userId
             GROUP BY l.categoryId
         """)
-    List<Object[]> findAllWithCountsByIdsState(@Param("userId") Long userId);
+    List<CategoryStatsDTO> findCategoryStatsByUserId(@Param("userId") Long userId);
 
     // 3. 링커 검색 (JPQL)
     @Query("""

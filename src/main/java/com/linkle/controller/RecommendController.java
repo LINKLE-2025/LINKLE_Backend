@@ -22,8 +22,8 @@ public class RecommendController { private final RestTemplate restTemplate = new
     private final RecommendService recommendService;
 
     @GetMapping
-    public ResponseEntity<List<ParticipateLinkerResponseDTO>> getRecommend(@RequestParam Long userId) {
-        return ResponseEntity.ok(recommendService.getRecommend(userId));
+    public ResponseEntity<List<ParticipateLinkerResponseDTO>> getRecommend(@RequestParam Long userId, @RequestParam String address_detail) {
+        return ResponseEntity.ok(recommendService.getRecommend(userId, address_detail));
     }
 
 }

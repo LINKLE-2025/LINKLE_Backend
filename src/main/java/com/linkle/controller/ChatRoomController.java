@@ -1,3 +1,4 @@
+// src/main/java/com/linkle/controller/ChatRoomController.java
 package com.linkle.controller;
 
 import com.linkle.domain.dto.*;
@@ -16,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,12 +42,31 @@ public class ChatRoomController {
     private final ProfileService profileService;
     private final UserBalanceService userBalanceService;
 
-    /** 그룹/클래스 방 생성 */
+    /** 그룹/클래스 방 생성 (JSON) - 기존 그대로 유지 */
     @PostMapping("/room")
     public RoomResponseDTO createRoom(@Valid @RequestBody CreateRoomRequestDTO body,
         HttpServletRequest req) {
         Long me = currentUserId(req);
         return chatRoomService.createRoom(body, me);
+    }
+
+    /** 그룹/클래스 방 생성 (멀티파트 + 배경 이미지 업로드) */
+    @PostMapping(value = "/room", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public RoomResponseDTO createRoomWithBackground(
+        @RequestPart("dto") @Valid CreateRoomRequestDTO body,
+        @RequestPart(value = "background", required = false) MultipartFile background,
+        HttpServletRequest req
+    ) throws IOException {
+        Long me = currentUserId(req);
+        // 1) 우선 방 생성
+        RoomResponseDTO dto = chatRoomService.createRoom(body, me);
+        // 2) 배경이 왔다면 업로드 + 반영
+        if (background != null && !background.isEmpty()) {
+            chatRoomService.updateRoomBackground(dto.getRoomId(), background);
+            // 최신 상태로 재조회
+            dto = chatRoomService.getRoomWithMeta(dto.getRoomId(), me);
+        }
+        return dto;
     }
 
     /** 1:1 DM 열기/조회 */
@@ -84,10 +105,10 @@ public class ChatRoomController {
         @PathVariable Long roomId,
         @RequestParam(required = false) Long beforeId,
         @RequestParam(required = false, defaultValue = "20") Integer size,
-        @RequestHeader("x-user-id") Long meId  // ★ 추가
+        @RequestHeader("x-user-id") Long meId
     ) {
         int pageSize = (size == null || size <= 0) ? 20 : size;
-        return chatMessageService.listMessages(roomId, meId, beforeId, pageSize); // ★ meId 전달
+        return chatMessageService.listMessages(roomId, meId, beforeId, pageSize);
     }
 
     /** 읽음 동기화 */
@@ -104,15 +125,15 @@ public class ChatRoomController {
         Long me = currentUserId(req);
         return unreadService.unreadSummary(me);
     }
-    /**채팅방 보이게 하기*/
+
+    /** 특정 링커의 모든 방(내가 멤버가 아닐 수도 있음) */
     @GetMapping("/room/by-linker")
     public List<RoomResponseDTO> roomsByLinker(@RequestParam Long linkerId, HttpServletRequest req) {
         Long me = currentUserId(req);
         return chatRoomService.listRoomsByLinker(linkerId, me);
     }
 
-
-    /** 톡 배경화면 */
+    /** 톡 배경화면(업로드 key 또는 색상 아이콘 파일)을 스트리밍 */
     @GetMapping("/view/background/{roomId}")
     public ResponseEntity<byte[]> viewRoomBackground(@PathVariable Long roomId) throws IOException {
         Optional<ChatRoom> room = chatRoomService.findById(roomId);
@@ -126,26 +147,31 @@ public class ChatRoomController {
             .contentType(resolveMediaType(key))
             .body(data);
     }
+
     @GetMapping("/view/color/{name}")
     public ResponseEntity<byte[]> viewColor(@PathVariable String name) throws IOException {
-        // 1) 입력 검증: 영문 소문자만 허용하고 화이트리스트로 한 번 더 막기
         String normalized = name.toLowerCase();
         List<String> allowed = List.of("red", "orange", "yellow", "green", "blue", "purple");
         if (!normalized.matches("^[a-z]+$") || !allowed.contains(normalized)) {
             return ResponseEntity.badRequest().build();
         }
-
-        // 2) MinIO Key 구성: color/red.png
         String key = "color/" + normalized + ".png";
-
-        // 3) 다운로드
         byte[] data = profileService.downloadFile(key);
-
-        // 4) 캐시 헤더(선택)
         return ResponseEntity.ok()
             .contentType(resolveMediaType(key))
-            .header("Cache-Control", "public, max-age=86400") // 1일 캐시
+            .header("Cache-Control", "public, max-age=86400")
             .body(data);
+    }
+
+    /** 방 배경 교체 전용 (이미 생성된 방) */
+    @PatchMapping(value = "/room/{roomId}/background", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public RoomResponseDTO updateRoomBackground(
+        @PathVariable Long roomId,
+        @RequestPart("background") MultipartFile background,
+        HttpServletRequest req
+    ) throws IOException {
+        chatRoomService.updateRoomBackground(roomId, background);
+        return chatRoomService.getRoomWithMeta(roomId, currentUserId(req));
     }
 
     @PostMapping("room/{roomId}/leave")
@@ -154,9 +180,8 @@ public class ChatRoomController {
         @RequestHeader("x-user-id") Long meId
     ) {
         chatRoomService.leaveRoom(roomId, meId);
-        return ResponseEntity.noContent().build(); // 204
+        return ResponseEntity.noContent().build();
     }
-
 
     // ---- helpers ----
     private MediaType resolveMediaType(String key) {
@@ -177,29 +202,16 @@ public class ChatRoomController {
         return 1L; // 개발용 기본값
     }
 
-
-
-    /** 방참가하기 */
+    /** 방참가하기 — (기존 그대로) */
     @PostMapping("/room/{roomId}/join")
     public ResponseEntity<?> join(@PathVariable Long roomId, HttpServletRequest req) {
         Long me = currentUserId(req);
-
-        System.out.println("💡 [JOIN] 송금하기 백단으로 왔나? userId=" + me);
-
-        // 1. 톡방 정보 조회
         ChatRoom room = chatRoomRepository.findById(roomId)
             .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 방입니다."));
 
-        System.out.println("💡 roomType=" + room.getRoomType() +
-            ", entryFee=" + room.getEntryFee() +
-            ", ownerId=" + room.getOwnerId());
-
         Long newBalance = null;
-
-        // 2. 클래스 톡방이면 입장료 송금
         if (room.getRoomType() != null && "CLASS".equalsIgnoreCase(String.valueOf(room.getRoomType()))) {
             int fee = room.getEntryFee() != null ? room.getEntryFee() : 0;
-
             if (fee > 0) {
                 Long ownerId = room.getOwnerId();
                 if (ownerId == null) {
@@ -207,25 +219,14 @@ public class ChatRoomController {
                         "error", "방 주인이 설정되지 않은 클래스 방입니다."
                     ));
                 }
-
                 try {
-                    // 송금 (참여자 → 방 주인)
                     long afterMe = userBalanceService.updateBalance(
-                        me,
-                        -fee,
-                        (room.getRoomName() != null ? room.getRoomName() : "") + " 입장료 차감"
+                        me, -fee, (room.getRoomName() != null ? room.getRoomName() : "") + " 입장료 차감"
                     );
                     long afterOwner = userBalanceService.updateBalance(
-                        ownerId,
-                        fee,
-                        (room.getRoomName() != null ? room.getRoomName() : "") + " 입장료 입금"
+                        ownerId, fee, (room.getRoomName() != null ? room.getRoomName() : "") + " 입장료 입금"
                     );
-
-                    System.out.println("💡 balance 업데이트 완료: 참여자=" + afterMe + ", 방주인=" + afterOwner);
-
-                    // 참가자 새 잔액 확인
                     newBalance = afterMe;
-
                 } catch (IllegalArgumentException e) {
                     return ResponseEntity.badRequest().body(Map.of(
                         "error", "잔액 부족으로 입장 불가",
@@ -235,18 +236,11 @@ public class ChatRoomController {
             }
         }
 
-        // 3. 참가 처리
         RoomResponseDTO dto = chatRoomService.joinRoom(roomId, me);
-
-        // 4. 응답 생성
         Map<String, Object> response = new java.util.HashMap<>();
         response.put("msg", "입장 성공");
         response.put("room", dto);
-        if (newBalance != null) {
-            response.put("balance", newBalance);
-        }
-
+        if (newBalance != null) response.put("balance", newBalance);
         return ResponseEntity.ok(response);
     }
-
 }

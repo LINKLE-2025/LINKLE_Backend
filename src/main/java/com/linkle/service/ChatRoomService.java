@@ -1,3 +1,4 @@
+// src/main/java/com/linkle/service/ChatRoomService.java
 package com.linkle.service;
 
 import com.linkle.domain.dto.CreateRoomRequestDTO;
@@ -14,8 +15,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
@@ -54,6 +59,7 @@ public class ChatRoomService {
             .roomName(req.getRoomName())
             .description(req.getDescription())
             .memo(req.getMemo())
+            // 배경은 숫자(1~6) 아이콘 이름 또는 업로드 key를 themeColor에 저장
             .themeColor(String.valueOf(req.getThemeColor()))
             .entryFee(req.getEntryFee())
             .startDate(req.getStartDate() == null ? null :
@@ -69,11 +75,37 @@ public class ChatRoomService {
             .room(saved)
             .user(userRepository.getReferenceById(ownerUserId))
             .alarm(Alarm.ON)
-            .joinedDate(Instant.now()) // ★ 최초 참여 시점 기록
+            .joinedDate(Instant.now())
             .build();
         chatPartRepository.save(ownerPart);
 
         return toRoomResponseWithMeta(saved, ownerUserId);
+    }
+
+    /** 방 배경 업로드 + themeColor를 업로드 key로 교체 */
+    @Transactional
+    public void updateRoomBackground(Long roomId, MultipartFile background) throws IOException {
+        if (background == null || background.isEmpty()) return;
+
+        ChatRoom room = chatRoomRepository.findById(roomId)
+            .orElseThrow(() -> new EntityNotFoundException("Room not found: " + roomId));
+
+        String original = background.getOriginalFilename();
+        String ext = (original != null && original.contains(".")) ? original.substring(original.lastIndexOf('.') + 1) : "png";
+        String key = "room_" + roomId + "." + ext;
+
+        s3Client.putObject(
+            PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType(background.getContentType())
+                .build(),
+            RequestBody.fromInputStream(background.getInputStream(), background.getSize())
+        );
+
+        // 업로드 성공 시 themeColor를 업로드 key로 덮어씀
+        room.setThemeColor(key);
+        chatRoomRepository.save(room);
     }
 
     /** 1:1 DM 열기/조회 — DmPair로 단일 방 보장 */
@@ -84,7 +116,6 @@ public class ChatRoomService {
             throw new IllegalArgumentException("자기 자신과의 DM은 생성할 수 없습니다.");
         }
 
-        // 사용자 로딩
         User me = userRepository.findById(meId)
             .orElseThrow(() -> new EntityNotFoundException("Current user not found: " + meId));
         User partner = userRepository.findById(targetId)
@@ -95,18 +126,16 @@ public class ChatRoomService {
 
         ChatRoom dmRoom;
 
-        // 1) pair 조회 (이미 있으면 그 방 재사용)
         Optional<DmPair> pairOpt = dmPairRepository.findBySmallerIdAndGreaterId(s, g);
         if (pairOpt.isPresent()) {
             dmRoom = pairOpt.get().getRoom();
 
-            // 내가 과거에 나갔으면 복구, 없으면 파트 생성
             var myPartOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(dmRoom.getRoomId(), meId);
             if (myPartOpt.isPresent()) {
                 ChatPart p = myPartOpt.get();
                 if (p.getLeftDate() != null) {
                     p.setLeftDate(null);
-                    p.setJoinedDate(Instant.now());   // 재입장 시 갱신
+                    p.setJoinedDate(Instant.now());
                     chatPartRepository.save(p);
                 }
             } else {
@@ -115,12 +144,11 @@ public class ChatRoomService {
                     .room(dmRoom)
                     .user(me)
                     .alarm(Alarm.ON)
-                    .joinedDate(Instant.now())        // 신규 생성 시각
+                    .joinedDate(Instant.now())
                     .build();
                 chatPartRepository.save(mePart);
             }
 
-            // 상대 파트도 보장(이상 상태 대비)
             var partnerPartOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(dmRoom.getRoomId(), partner.getUserId());
             if (partnerPartOpt.isEmpty()) {
                 ChatPart partnerPart = ChatPart.builder()
@@ -128,12 +156,11 @@ public class ChatRoomService {
                     .room(dmRoom)
                     .user(partner)
                     .alarm(Alarm.ON)
-                    .joinedDate(Instant.now())        // ★ 누락 대비
+                    .joinedDate(Instant.now())
                     .build();
                 chatPartRepository.save(partnerPart);
             }
         } else {
-            // 2) 없으면 새 방 + pair 생성 (경합 시 유니크 예외 처리)
             dmRoom = chatRoomRepository.save(ChatRoom.builder()
                 .roomType(RoomType.DM)
                 .roomName(null)
@@ -145,14 +172,14 @@ public class ChatRoomService {
                 .room(dmRoom)
                 .user(me)
                 .alarm(Alarm.ON)
-                .joinedDate(Instant.now())            // ★ 최초 참여
+                .joinedDate(Instant.now())
                 .build();
             ChatPart partnerPart = ChatPart.builder()
                 .id(new ChatPartId(dmRoom.getRoomId(), partner.getUserId()))
                 .room(dmRoom)
                 .user(partner)
                 .alarm(Alarm.ON)
-                .joinedDate(Instant.now())            // ★ 최초 참여
+                .joinedDate(Instant.now())
                 .build();
             chatPartRepository.saveAll(List.of(mePart, partnerPart));
 
@@ -161,9 +188,8 @@ public class ChatRoomService {
                     .room(dmRoom)
                     .userAId(meId)
                     .userBId(targetId)
-                    .build()); // @PrePersist에서 smaller/greater 세팅
+                    .build());
             } catch (DataIntegrityViolationException e) {
-                // 경쟁 상황: 기존 pair 재조회하여 그 방 사용
                 dmRoom = dmPairRepository.findBySmallerIdAndGreaterId(s, g)
                     .map(DmPair::getRoom)
                     .orElse(dmRoom);

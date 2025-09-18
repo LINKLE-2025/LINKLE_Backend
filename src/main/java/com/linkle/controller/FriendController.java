@@ -2,7 +2,9 @@ package com.linkle.controller;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -79,6 +81,30 @@ public class FriendController {
     @DeleteMapping("/{friendId}")
     public void deleteFriend(@PathVariable Long friendId) {
         friendService.deleteFriend(friendId);
+    }
+
+    // 친구 관계 조회
+    @GetMapping("/relationship")
+    public ResponseEntity<?> getFriendRelationship(
+        @RequestParam Long userId1,
+        @RequestParam Long userId2
+    ) {
+        Friend friend = friendService.getFriendRelationship(userId1, userId2);
+
+        if (friend == null) {
+            return ResponseEntity.ok(Map.of(
+                "exists", false,
+                "state", "NONE"
+            ));
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "exists", true,
+            "friendId", friend.getFriendId(),
+            "state", friend.getState(),  // ACCEPTED / PENDING / REJECTED
+            "userId1", friend.getUser1().getUserId(),
+            "userId2", friend.getUser2().getUserId()
+        ));
     }
 
 }

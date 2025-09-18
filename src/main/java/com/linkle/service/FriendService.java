@@ -86,4 +86,9 @@ public class FriendService {
     public void deleteFriend(Long friendId){
         friendRepository.deleteById(friendId);
     }
+
+    // 친구 관계 조회
+    public Friend getFriendRelationship(Long userId1, Long userId2) {
+        return friendRepository.findByUserPair(userId1, userId2);
+    }
 }

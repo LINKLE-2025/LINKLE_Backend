@@ -18,6 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.LocalDate;
+import java.time.DayOfWeek;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -30,6 +34,7 @@ public class ChatMessageService {
     private final UserRepository userRepository;
     private final ChatEventProducer eventProducer;
     private final DmPairRepository dmPairRepository;
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     /** 일반 메시지 전송 (DM: 보낸 사람/상대 모두 자동 복구) */
     @Transactional
@@ -38,6 +43,8 @@ public class ChatMessageService {
             .orElseThrow(() -> new EntityNotFoundException("Room not found: " + req.getRoomId()));
 
         Instant now = Instant.now();
+
+        ensureDateHeader(room,now);
 
         // --- 1) 보낸 사람 파트 보장/복구 ---
         var myPartOpt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(room.getRoomId(), senderUserId);
@@ -136,6 +143,9 @@ public class ChatMessageService {
         ChatRoom room = chatRoomRepository.findById(roomId)
             .orElseThrow(() -> new EntityNotFoundException("Room not found: " + roomId));
 
+        Instant now = Instant.now();
+
+        ensureDateHeader(room,now);
         ChatMessage saved = chatMessageRepository.save(
             ChatMessage.builder()
                 .room(room)
@@ -208,5 +218,58 @@ public class ChatMessageService {
                     .build();
             })
             .toList();
+    }
+    /** KST 기준 "yyyy년 M월 d일 E요일" 포맷 */
+    private String formatDateHeaderKorean(Instant instant) {
+        ZonedDateTime z = instant.atZone(KST);
+        String dow = switch (z.getDayOfWeek()) {
+            case MONDAY    -> "월요일";
+            case TUESDAY   -> "화요일";
+            case WEDNESDAY -> "수요일";
+            case THURSDAY  -> "목요일";
+            case FRIDAY    -> "금요일";
+            case SATURDAY  -> "토요일";
+            case SUNDAY    -> "일요일";
+        };
+        return String.format("%d년 %d월 %d일 %s",
+            z.getYear(), z.getMonthValue(), z.getDayOfMonth(), dow);
+    }
+
+    /** 오늘(=now)과 마지막 메시지의 'KST 기준 LocalDate'가 다르면, 날짜 헤더 SYSTEM 메시지를 삽입 */
+    private void ensureDateHeader(ChatRoom room, Instant now) {
+        var lastOpt = chatMessageRepository
+            .findTopByRoom_RoomIdOrderByMessageIdDesc(room.getRoomId());
+        LocalDate todayKst = now.atZone(KST).toLocalDate();
+        LocalDate lastDateKst = lastOpt
+            .map(m -> m.getCreatedDate().atZone(KST).toLocalDate())
+            .orElse(null);
+
+        if (lastDateKst == null || !lastDateKst.equals(todayKst)) {
+            // 날짜 헤더용 SYSTEM 메시지 생성
+            ChatMessage header = chatMessageRepository.save(
+                ChatMessage.builder()
+                    .room(room)
+                    .userId(null)                  // 시스템
+                    .type(MessageType.SYSTEM)      // 필요하면 별도 타입 추가 가능 (예: SYSTEM_DATE)
+                    .text(formatDateHeaderKorean(now))
+                    .build()
+            );
+
+            // 브로드캐스트 (기존 로직 재사용)
+            MessageCreatedEvent event = MessageCreatedEvent.builder()
+                .messageId(header.getMessageId())
+                .roomId(room.getRoomId())
+                .messageType(header.getType())
+                .text(header.getText())
+                .createdDate(header.getCreatedDate())
+                .senderId(null)
+                .senderName(null)
+                .senderImage(null)
+                .build();
+
+            eventProducer.messageCreated(event);
+            var memberUserIds = chatPartRepository.findUserIdsByRoomId(room.getRoomId());
+            eventProducer.messageCreatedToUsers(event, memberUserIds);
+        }
     }
 }

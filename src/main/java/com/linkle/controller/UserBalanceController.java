@@ -128,13 +128,18 @@ public class UserBalanceController {
         @RequestBody Map<String, Object> body
     ) {
         long amount = ((Number) body.getOrDefault("amount", 0L)).longValue();
-        String memo = (String) body.getOrDefault("memo", ""); // 메모 추가
+        String memo = (String) body.getOrDefault("memo", "");
         try {
-            long newBalance = userBalanceService.updateBalance(userId, amount,memo);
-            return ResponseEntity.ok(Map.of("balance", newBalance));
+            long newBalance = userBalanceService.updateBalance(userId, amount, memo);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "balance", newBalance
+            ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+            return ResponseEntity.ok(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
         }
     }
 

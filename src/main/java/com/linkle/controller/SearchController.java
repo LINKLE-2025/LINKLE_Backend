@@ -40,6 +40,10 @@ public class SearchController {
         @RequestParam("word") String word,
         @PageableDefault(size = 10) Pageable pageable
     ) {
+        // ✅ 방어 로직 추가
+        if (word == null || word.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("검색어는 비어 있을 수 없습니다.");
+        }
         word = "%" + word + "%";
         return ResponseEntity.ok(
             searchService.getAllLinkersByName(word, pageable)

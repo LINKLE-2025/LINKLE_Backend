@@ -58,7 +58,7 @@ public class SearchService {
             linker.setMemo(memo);
             linker.setState(state);
             linker.setAddress(address);
-
+            System.out.println("검색어 word = "+ word); // word가 "%ㄱ%" 형태인지 확인
             return ParticipateLinkerResponseDTO.from(linker, chatRoomCount, postCount);
         });
     }

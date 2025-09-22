@@ -68,20 +68,20 @@ public interface ParticipateRepository extends JpaRepository<Participate, Long> 
 
     // 3. 링커 검색 (JPQL)
     @Query("""
-            SELECT l.linkerId,
-                   l.name,
-                   l.categoryId,
-                   l.memo,
-                   COUNT(DISTINCT c.roomId),
-                   COUNT(DISTINCT p.postId),
-                   l.state,
-                   l.address
-            FROM Linker l
-            LEFT JOIN l.posts p
-            LEFT JOIN ChatRoom c ON c.linker = l
-            WHERE l.name LIKE %:word%
-            GROUP BY l.linkerId, l.name, l.categoryId, l.memo, l.state, l.address
-        """)
+    SELECT l.linkerId,
+           l.name,
+           l.categoryId,
+           l.memo,
+           COUNT(DISTINCT c.roomId),
+           COUNT(DISTINCT p.postId),
+           l.state,
+           l.address
+    FROM Linker l
+    LEFT JOIN l.posts p
+    LEFT JOIN ChatRoom c ON c.linker = l
+    WHERE l.name LIKE CONCAT('%', :word, '%')
+    GROUP BY l.linkerId, l.name, l.categoryId, l.memo, l.state, l.address
+""")
     Page<Object[]> findAllWithCountsRaw(@Param("word") String word, Pageable pageable);
 
     // 4. 링크별 유저 참여 여부 체크 (그대로 사용)

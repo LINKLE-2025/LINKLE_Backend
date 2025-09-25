@@ -3,6 +3,9 @@ plugins {
     id 'org.springframework.boot' version '3.5.4'
     id 'io.spring.dependency-management' version '1.1.7'
 }
+ext {
+    springAiVersion = "1.0.2"
+}
 
 group = 'com.linkle'
 version = '1.0.0'
@@ -25,7 +28,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation' // Spring Validation (@Valid 등 유효성 검사용)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     // Spring Boot Actuator (서버 상태, 헬스 체크, 메트릭 등 모니터링 도구)
-    implementation 'org.springframework.boot:spring-boot-starter-security' // Spring Security (로그인/인증/인가 등 보안 기능)
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.ai:spring-ai-starter-vector-store-mariadb'
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'// Spring Security (로그인/인증/인가 등 보안 기능)
 
     // 개발/테스트 환경 설정
     developmentOnly 'org.springframework.boot:spring-boot-devtools' // 개발 도중 자동 리로딩 지원 (핫리로딩)
@@ -85,6 +90,11 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+}
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:$springAiVersion"
+    }
 }
 
 tasks.named('test') {

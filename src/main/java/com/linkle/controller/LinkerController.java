@@ -14,7 +14,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.linkle.domain.dto.LinkerDTO;
 import com.linkle.domain.dto.ParticipateDTO;
+import com.linkle.service.LinkerRecommendService;
 import com.linkle.service.LinkerService;
+import com.linkle.util.LinkerMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LinkerController {
     private final LinkerService linkerService;
+    private final LinkerRecommendService linkerRecommendService;
 
     @GetMapping("/{id}")
     public LinkerDTO linkerDetail(@PathVariable("id") Long linkerId){
@@ -48,7 +51,11 @@ public class LinkerController {
         log.info("생성일: {}", linkerDTO.getCreatedDate());
         log.info("메모: {}", linkerDTO.getMemo());
 
-        linkerService.createLinker(linkerDTO);
+        // 1) DB에 저장
+        LinkerDTO saved = linkerService.createLinker(linkerDTO);
+
+        // 2) Entity로 변환해서 벡터스토어에 저장
+        linkerRecommendService.saveLinkerWithEmbedding(LinkerMapper.toEntity(saved));
     }
 
     // 🔹 참여 여부 체크

@@ -183,8 +183,11 @@ public class ChatMessageService {
     }
 
     /** joinedDate를 고려한 메시지 목록 조회 */
+    // ChatMessageService.java
+
     @Transactional(readOnly = true)
     public List<MessageResponseDTO> listMessages(Long roomId, Long meId, Long beforeMessageId, int pageSize) {
+        // 내가 방에 들어온 시각 (joinedDate) 이후만 보여주기
         Instant joinedAt = chatPartRepository.findByRoom_RoomIdAndUser_UserId(roomId, meId)
             .map(ChatPart::getJoinedDate)
             .orElse(null);
@@ -203,8 +206,27 @@ public class ChatMessageService {
                 roomId, joinedAt, beforeMessageId, PageRequest.of(0, pageSize));
         }
 
-        return slice.getContent().stream()
+        // 1) 이번 페이지에 포함된 메시지들
+        List<ChatMessage> messages = slice.getContent();
+
+        // 2) 현재 방의 "활성 멤버(leave 안 한 사람)"들의 lastReadMsgId를 한 번에 가져오기
+        //    필요 시 repository에 아래 메서드 추가:
+        //    List<ChatPart> findByRoom_RoomIdAndLeftDateIsNull(Long roomId);
+        List<ChatPart> activeParts = chatPartRepository.findByRoom_RoomIdAndLeftDateIsNull(roomId);
+
+        // 3) 각 메시지별 readCount 계산
+        //    (페이지 사이즈가 20~50 정도라면 O(N*M) 계산도 충분히 가볍습니다)
+        return messages.stream()
             .map(m -> {
+                long msgId = m.getMessageId();
+                int readCount = 0;
+                for (ChatPart p : activeParts) {
+                    Long last = p.getLastReadMsgId();
+                    if (last != null && last >= msgId) {
+                        readCount++;
+                    }
+                }
+
                 User su = m.getUserId(); // SYSTEM이면 null
                 return MessageResponseDTO.builder()
                     .messageId(m.getMessageId())
@@ -215,10 +237,12 @@ public class ChatMessageService {
                     .senderId(su != null ? su.getUserId() : null)
                     .senderName(su != null ? su.getName() : null)
                     .senderImage(su != null ? su.getImage() : null)
+                    .readCount(readCount)               // ★ 여기서 채워서 내려보냄
                     .build();
             })
             .toList();
     }
+
     /** KST 기준 "yyyy년 M월 d일 E요일" 포맷 */
     private String formatDateHeaderKorean(Instant instant) {
         ZonedDateTime z = instant.atZone(KST);

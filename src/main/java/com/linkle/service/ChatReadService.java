@@ -1,6 +1,7 @@
 package com.linkle.service;
 
 import com.linkle.domain.dto.MessageReadEvent;
+import com.linkle.domain.dto.MyReadStateDTO;
 import com.linkle.domain.dto.ReadSyncRequestDTO;
 import com.linkle.domain.entity.ChatPart;
 import com.linkle.domain.entity.ChatMessage;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -69,4 +71,21 @@ public class ChatReadService {
         // 유저 단일 토픽에도 발행 (리스트 갱신)
         eventProducer.messageReadToUser(evt, readerUserId);
     }
+
+    @Transactional(readOnly = true)
+    public List<MyReadStateDTO> listRoomReads(Long roomId) {
+        // 이미 멤버 조회에 쓰던 쿼리 재사용
+        List<ChatPart> parts = chatPartRepository.findActiveByRoomIdWithUser(roomId);
+        return parts.stream()
+            .map(p -> MyReadStateDTO.builder()
+                .userId(p.getUser().getUserId())
+                .lastReadMessageId(p.getLastReadMsgId())
+                // 별도 타임스탬프 칼럼이 없으면 null 유지(프론트에서 안 써도 됨)
+                .build()
+            )
+            .toList();
+    }
+
+
+
 }

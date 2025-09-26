@@ -8,6 +8,7 @@ import com.linkle.repository.ChatMessageRepository;
 import com.linkle.repository.ChatPartRepository;
 import com.linkle.repository.ChatRoomRepository;
 import com.linkle.service.*;
+import com.linkle.util.StompDestinations;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.IOException;
 import java.util.List;
@@ -111,12 +113,20 @@ public class ChatRoomController {
         return chatMessageService.listMessages(roomId, meId, beforeId, pageSize);
     }
 
+    /** 방의 멤버별 마지막 읽음 상태(초기 로딩용) */
+    @GetMapping("/room/{roomId}/reads")
+    public List<MyReadStateDTO> roomReads(@PathVariable Long roomId) {
+        return chatReadService.listRoomReads(roomId);
+    }
+
+
     /** 읽음 동기화 */
     @PostMapping("/read")
     public void syncRead(@Valid @RequestBody ReadSyncRequestDTO body,
         HttpServletRequest req) {
         Long me = currentUserId(req);
         chatReadService.syncRead(body, me);
+
     }
 
     /** 내 전체/방별 미확인 수 요약 */

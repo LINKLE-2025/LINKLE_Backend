@@ -105,7 +105,4 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     @Transactional
     @Query("DELETE FROM Friend f WHERE f.user1.userId = :userId OR f.user2.userId = :userId")
     void deleteByUserId(@Param("userId") Long userId);
-
-
-
 }

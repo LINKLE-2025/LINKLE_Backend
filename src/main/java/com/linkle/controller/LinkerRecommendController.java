@@ -21,17 +21,16 @@ public class LinkerRecommendController {
      * 위치 + 관심사 기반 추천
      * GET /api/linkers/recommend?lat=37.5&lng=127.0&interests=카페&radiusKm=3&topK=10
      */
-    @GetMapping
+    @GetMapping("/recommend")
     public List<RecommendedLinkerDto> recommend(
         @RequestParam("lat") Double lat,
         @RequestParam("lng") Double lng,
         @RequestParam(defaultValue = "3") Double radiusKm,
-        @RequestParam("interests") String interests,
+        @RequestParam("userId") Long userId,   // 로그인된 사용자 ID
         @RequestParam(defaultValue = "10") Integer topK
     ) {
-        return linkerRecommendService.recommend(lat, lng, radiusKm, interests, topK);
+        return linkerRecommendService.recommend(userId, lat, lng, radiusKm, topK);
     }
-
 
     /**
      * 기존 DB에 있는 Linker들을 벡터스토어에 백필

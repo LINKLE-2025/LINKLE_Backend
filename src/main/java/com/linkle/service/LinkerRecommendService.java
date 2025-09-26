@@ -60,19 +60,23 @@ public class LinkerRecommendService {
             default: categoryName = "기타"; break;
         }
 
-        // 이름 + 메모 + 카테고리명 + 주소까지 포함
+        // 이름 + 메모 + 카테고리명 + 주소+위도+경도까지 포함
         String content = """
-            이름: %s
-            메모: %s
-            카테고리: %s
-            주소명: %s
-            주소: %s
-            """.formatted(
+    이름: %s
+    메모: %s
+    카테고리: %s
+    주소명: %s
+    주소: %s
+    위도: %.6f
+    경도: %.6f
+    """.formatted(
             linker.getName() != null ? linker.getName() : "",
             linker.getMemo() != null ? linker.getMemo() : "",
             categoryName,
             linker.getAddressName() != null ? linker.getAddressName() : "",
-            linker.getAddress() != null ? linker.getAddress() : ""
+            linker.getAddress() != null ? linker.getAddress() : "",
+            linker.getLocationY(),
+            linker.getLocationX()
         );
 
         Document doc = Document.builder()
@@ -81,7 +85,9 @@ public class LinkerRecommendService {
             .metadata(Map.of(
                 "linkerId", linker.getLinkerId(),
                 "lat", linker.getLocationY(),   // 위도
-                "lng", linker.getLocationX()    // 경도
+                "lng", linker.getLocationX() ,  // 경도
+                "AddressName",linker.getAddressName(),
+                "Address",linker.getAddress()
             ))
             .build();
 
@@ -108,14 +114,14 @@ public class LinkerRecommendService {
             .flatMap(fid -> participateByRecommendRepository.findTopCategoriesByUser(fid).stream())
             .toList();
 
-        // 3. 프로필 텍스트 생성
-        String profileText = """
-        사용자가 자주 참여한 카테고리: %s
-        친구들이 자주 참여한 카테고리: %s
-        """.formatted(myTopCategories, friendTopCategories);
+        // 3. 텍스트 생성
+        String text = """
+    사용자가 자주 참여한 카테고리: %s
+    친구들이 자주 참여한 카테고리: %s
+    """.formatted(myTopCategories, friendTopCategories);
 
         // 4. 벡터스토어 유사도 검색
-        List<Document> hits = vectorStore.similaritySearch(profileText);
+        List<Document> hits = vectorStore.similaritySearch(text);
 
         // 5. linkerId 목록 추출
         List<Long> linkerIds = hits.stream()
@@ -123,6 +129,18 @@ public class LinkerRecommendService {
             .toList();
 
         if (linkerIds.isEmpty()) return List.of();
+
+        // 거리 계산 함수
+        double earthRadius = 6371.0; // km
+        java.util.function.BiFunction<double[], double[], Double> haversine = (a, b) -> {
+            double dLat = Math.toRadians(b[0] - a[0]);
+            double dLng = Math.toRadians(b[1] - a[1]);
+            double lat1 = Math.toRadians(a[0]);
+            double lat2 = Math.toRadians(b[0]);
+            double h = Math.pow(Math.sin(dLat / 2), 2)
+                + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dLng / 2), 2);
+            return 2 * earthRadius * Math.asin(Math.sqrt(h));
+        };
 
         // 6. chatRoomCount, postCount 한 번에 조회
         List<Object[]> countsData = participateByRecommendRepository.findAllWithCountsByIds(linkerIds);
@@ -135,6 +153,17 @@ public class LinkerRecommendService {
                 Long linkerId = Long.valueOf(d.getMetadata().get("linkerId").toString());
                 Double similarityScore = d.getScore();
 
+                Double lat = (Double) d.getMetadata().get("lat");
+                Double lng = (Double) d.getMetadata().get("lng");
+                if (lat == null || lng == null) return null;
+
+                // 거리 계산 후 반경 필터링
+                double distance = haversine.apply(
+                    new double[]{myLat, myLng},
+                    new double[]{lat, lng}
+                );
+                if (distance > radiusKm) return null;
+
                 Optional<Linker> opt = linkerRepository.findById(linkerId);
                 if (opt.isEmpty()) return null;
 
@@ -145,7 +174,7 @@ public class LinkerRecommendService {
                 Long chatRoomCount = ((Number) row[4]).longValue();
                 Long postCount = ((Number) row[5]).longValue();
 
-                return RecommendedLinkerDto.from(linker, similarityScore, chatRoomCount, postCount,userName);
+                return RecommendedLinkerDto.from(linker, similarityScore, chatRoomCount, postCount, userName);
             })
             .filter(Objects::nonNull)
             .sorted(Comparator.comparing(RecommendedLinkerDto::getScore).reversed())
@@ -154,6 +183,7 @@ public class LinkerRecommendService {
 
         return results;
     }
+
 
     /**
      * 기존 DB 데이터 → 벡터스토어에 백필

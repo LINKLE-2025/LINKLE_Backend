@@ -19,6 +19,8 @@ java {
 
 repositories {
     mavenCentral()
+    maven { url "https://repo.spring.io/milestone" }
+    maven { url "https://repo.spring.io/release" }
 }
 
 dependencies {

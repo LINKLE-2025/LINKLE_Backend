@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/linkers/recommend")
+@RequestMapping("/api/linkers")
 public class LinkerRecommendController {
 
     private final LinkerRecommendService linkerRecommendService;
@@ -29,7 +29,7 @@ public class LinkerRecommendController {
         @RequestParam("userId") Long userId,   // 로그인된 사용자 ID
         @RequestParam(defaultValue = "10") Integer topK
     ) {
-        return linkerRecommendService.recommend(userId, lat, lng, radiusKm, topK);
+        return linkerRecommendService.recommendByEmbedding(userId, lat, lng, radiusKm, topK);
     }
 
     /**

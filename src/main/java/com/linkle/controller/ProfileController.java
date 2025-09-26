@@ -61,12 +61,25 @@ public class ProfileController {
         @RequestPart(value = "profile", required = false) MultipartFile profile,
         @RequestPart(value = "background", required = false) MultipartFile background
     ) throws IOException {
-        if (profile != null && !profile.isEmpty()) {
-            dto.setImage(profileService.uploadProfileImage(profile, userId));
+
+        // 프로필 이미지 처리
+        if (profile != null) {
+            if (!profile.isEmpty()) {
+                dto.setImage(profileService.uploadProfileImage(profile, userId));
+            } else {
+                dto.setImage(null); // 빈 파일이면 DB 컬럼 null
+            }
         }
-        if (background != null && !background.isEmpty()) {
-            dto.setBackground(profileService.uploadBackgroundImage(background, userId));
+
+        // 배경 이미지 처리
+        if (background != null) {
+            if (!background.isEmpty()) {
+                dto.setBackground(profileService.uploadBackgroundImage(background, userId));
+            } else {
+                dto.setBackground(null); // 빈 파일이면 DB 컬럼 null
+            }
         }
+
         return ResponseEntity.ok(profileService.updateUserProfile(userId, dto));
     }
 

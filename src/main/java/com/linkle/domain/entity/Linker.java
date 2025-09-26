@@ -1,6 +1,7 @@
 package com.linkle.domain.entity;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 import jakarta.persistence.CascadeType;
@@ -80,4 +81,5 @@ public class Linker {
             state = LinkerState.ACTIVATED; // 기본 상태 설정
         }
     }
+
 }

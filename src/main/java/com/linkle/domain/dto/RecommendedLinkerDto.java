@@ -1,5 +1,7 @@
 package com.linkle.domain.dto;
 
+import java.util.List;
+
 import com.linkle.domain.entity.Linker;
 import com.linkle.domain.entity.LinkerState;
 
@@ -24,9 +26,13 @@ public class RecommendedLinkerDto {
     private Double locationY;   // 위도
     private Double score;       // 유사도 점수
     private LinkerState state; // 링커 활성 상태
-
+    private Long chatRoomCount; // 추가
+    private Long postCount;     // 추가
+    private String userName;
+    private List<Integer> myTopCategories;
+    private List<Integer> friendTopCategories;
     // 정적 팩토리 메서드 추가
-    public static RecommendedLinkerDto from(Linker linker, double score) {
+    public static RecommendedLinkerDto from(Linker linker, double score, Long chatRoomCount, Long postCount,String userName) {
         return RecommendedLinkerDto.builder()
             .linkerId(linker.getLinkerId())
             .name(linker.getName())
@@ -38,6 +44,9 @@ public class RecommendedLinkerDto {
             .locationY(linker.getLocationY())
             .state(linker.getState())
             .score(score)
+            .userName(userName)
+            .chatRoomCount(chatRoomCount)
+            .postCount(postCount)
             .build();
     }
 }

@@ -71,4 +71,22 @@ public interface ParticipateByRecommendRepository extends JpaRepository<Particip
         ORDER BY COUNT(p) DESC
         """)
     List<Long> findTopLinkerIdsByFriends(@Param("friendIds") List<Long> friendIds);
+
+
+    @Query("""
+            SELECT l.linkerId,
+                   l.name,
+                   l.categoryId,
+                   l.memo,
+                   COUNT(DISTINCT c.roomId),
+                   COUNT(DISTINCT p.postId),
+                   l.state,
+                   l.address
+            FROM Linker l
+            LEFT JOIN l.posts p
+            LEFT JOIN ChatRoom c ON c.linker = l
+            WHERE l.linkerId IN :ids
+            GROUP BY l.linkerId, l.name, l.categoryId, l.memo, l.state, l.address
+        """)
+    List<Object[]> findAllWithCountsByIds(@Param("ids") List<Long> ids);
 }

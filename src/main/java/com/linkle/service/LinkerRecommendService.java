@@ -12,9 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.linkle.domain.dto.RecommendedLinkerDto;
 import com.linkle.domain.entity.Linker;
 import com.linkle.domain.entity.LinkerState;
+import com.linkle.domain.entity.User;
+import com.linkle.repository.ChatRoomRepository;
 import com.linkle.repository.FriendRepository;
 import com.linkle.repository.LinkerRepository;
 import com.linkle.repository.ParticipateByRecommendRepository;
+import com.linkle.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +31,8 @@ public class LinkerRecommendService {
     private final VectorStore vectorStore; // MariaDB용 VectorStore 또는 외부 Vector DB
     private final ParticipateByRecommendRepository participateByRecommendRepository;
     private final FriendRepository friendRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final UserRepository userRepository;
 
     /**
      * Linker를 저장하면서 벡터스토어에도 Embedding 등록
@@ -86,57 +91,69 @@ public class LinkerRecommendService {
             linker.getLinkerId(), categoryName, linker.getAddressName());
     }
 
-    /**
-     * 순수 임베딩 기반 추천
-     */
     public List<RecommendedLinkerDto> recommendByEmbedding(
         Long myId, double myLat, double myLng, double radiusKm, int topK) {
 
         // 1. 내 프로필 텍스트 생성
         List<Integer> myTopCategories = participateByRecommendRepository.findTopCategoriesByUser(myId);
+
+        // 닉네임, 카테고리 불러오기
+        String userName = userRepository.findById(myId)
+            .map(User::getName)
+            .orElse("사용자");
+
         // 2. 친구들의 주요 카테고리
         List<Long> friendIds = friendRepository.findAllFriendIds(myId);
         List<Integer> friendTopCategories = friendIds.stream()
             .flatMap(fid -> participateByRecommendRepository.findTopCategoriesByUser(fid).stream())
-            .collect(Collectors.toList());
+            .toList();
 
         // 3. 프로필 텍스트 생성
         String profileText = """
-    사용자가 자주 참여한 카테고리: %s
-    친구들이 자주 참여한 카테고리: %s
-    """.formatted(myTopCategories, friendTopCategories);
-        //(내가 가장 많이 참여한 카테고리 ID 목록  내 친구들이 자주 참여한 카테고리)
+        사용자가 자주 참여한 카테고리: %s
+        친구들이 자주 참여한 카테고리: %s
+        """.formatted(myTopCategories, friendTopCategories);
 
-        // 2. 벡터스토어 유사도 검색 (profileText 직접 전달)
+        // 4. 벡터스토어 유사도 검색
         List<Document> hits = vectorStore.similaritySearch(profileText);
 
-        // 3. Document → DTO 변환
+        // 5. linkerId 목록 추출
+        List<Long> linkerIds = hits.stream()
+            .map(d -> Long.valueOf(d.getMetadata().get("linkerId").toString()))
+            .toList();
+
+        if (linkerIds.isEmpty()) return List.of();
+
+        // 6. chatRoomCount, postCount 한 번에 조회
+        List<Object[]> countsData = participateByRecommendRepository.findAllWithCountsByIds(linkerIds);
+        Map<Long, Object[]> countsMap = countsData.stream()
+            .collect(Collectors.toMap(row -> ((Number) row[0]).longValue(), row -> row));
+
+        // 7. DTO 변환
         List<RecommendedLinkerDto> results = hits.stream()
             .map(d -> {
-                // 검사를 통해 얻은 결과값에서 linkerId를 꺼냄
                 Long linkerId = Long.valueOf(d.getMetadata().get("linkerId").toString());
-                Double similarityScore = d.getScore(); // 순수 임베딩 점수 를 꺼냄
-                Optional<Linker> opt = linkerRepository.findById(linkerId); // 꺼낸 linkerId를 통해서 실제로 있는 linker인지 select
+                Double similarityScore = d.getScore();
 
-                // 만약 select된 linker가 없으면 null return
+                Optional<Linker> opt = linkerRepository.findById(linkerId);
                 if (opt.isEmpty()) return null;
 
-                //있다면 Linker타입으로 변환
                 Linker linker = opt.get();
-
-                // 활성화된 Linker만 추천
                 if (linker.getState() != LinkerState.ACTIVATED) return null;
 
-                //추천된 linker와 유사도 점수를 RecommendedLinkerDto에 합치기
-                return RecommendedLinkerDto.from(linker, similarityScore);
+                Object[] row = countsMap.get(linkerId);
+                Long chatRoomCount = ((Number) row[4]).longValue();
+                Long postCount = ((Number) row[5]).longValue();
+
+                return RecommendedLinkerDto.from(linker, similarityScore, chatRoomCount, postCount,userName);
             })
             .filter(Objects::nonNull)
-            .sorted(Comparator.comparing(RecommendedLinkerDto::getScore).reversed()) // 유사도점수 높은 순
+            .sorted(Comparator.comparing(RecommendedLinkerDto::getScore).reversed())
+            .limit(topK)
             .toList();
 
         return results;
     }
-
 
     /**
      * 기존 DB 데이터 → 벡터스토어에 백필

@@ -37,4 +37,9 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
         @Param("type") RoomType type);
 
     Page<ChatRoom> findByLinker_LinkerId(Long linkerId, Pageable pageable);
+
+
+    // 링커 ID로 채팅방 숫자 세기
+    @Query("SELECT COUNT(c) FROM ChatRoom c WHERE c.linker.linkerId = :linkerId")
+    Double countByLinkerId(@Param("linkerId") Long linkerId);
 }

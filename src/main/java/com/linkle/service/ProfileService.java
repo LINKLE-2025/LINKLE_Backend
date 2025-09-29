@@ -112,7 +112,8 @@ public class ProfileService {
     }
 
     // 유저 수정
-    public ProfileEditResponseDTO updateUserProfile(Long userId, ProfileEditRequestDTO dto) {
+    // 변경 후
+    public ProfileEditResponseDTO updateUserProfile(Long userId, ProfileEditRequestDTO dto, boolean profileUpdated, boolean backgroundUpdated) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
 
@@ -121,10 +122,18 @@ public class ProfileService {
         if (dto.getPassword() != null) user.setPassword(dto.getPassword());
         if (dto.getNickname() != null) user.setNickname(dto.getNickname());
         if (dto.getGender() != null) user.setGender(dto.getGender());
-        user.setImage(dto.getImage() != null && !dto.getImage().isBlank() ? dto.getImage() : null);
-        user.setBackground(dto.getBackground() != null && !dto.getBackground().isBlank() ? dto.getBackground() : null);
         if (dto.getMemo() != null) user.setMemo(dto.getMemo());
         if (dto.getAccountNumber() != null) user.setAccountNumber(dto.getAccountNumber());
+
+        // profileUpdated 플래그가 true일 때만 이미지 필드를 업데이트
+        if (profileUpdated) {
+            user.setImage(dto.getImage() != null && !dto.getImage().isBlank() ? dto.getImage() : null);
+        }
+
+        // backgroundUpdated 플래그가 true일 때만 배경 필드를 업데이트
+        if (backgroundUpdated) {
+            user.setBackground(dto.getBackground() != null && !dto.getBackground().isBlank() ? dto.getBackground() : null);
+        }
 
         userRepository.save(user);
         return ProfileEditResponseDTO.fromEntity(user);

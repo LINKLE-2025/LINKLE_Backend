@@ -54,6 +54,7 @@ public class ProfileController {
     // 유저 수정
     // MediaType은 기본 제공되는 파일 타입들이 존재
     // RequestPart는 일반적으로 RequestParm은 JSON 형태로 가져오지만 Media 형태는 문자열이 아니기 때문에 이를 해결하기 위해 RequestPart를 활용함
+    // 변경 후
     @PatchMapping(value = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ProfileEditResponseDTO> updateUserProfile(
         @PathVariable Long userId,
@@ -62,25 +63,32 @@ public class ProfileController {
         @RequestPart(value = "background", required = false) MultipartFile background
     ) throws IOException {
 
+        // 이미지 업데이트 여부를 추적할 플래그 추가
+        boolean profileUpdated = false;
+        boolean backgroundUpdated = false;
+
         // 프로필 이미지 처리
         if (profile != null) {
+            profileUpdated = true; // 프로필 파트가 요청에 포함되었음을 표시
             if (!profile.isEmpty()) {
                 dto.setImage(profileService.uploadProfileImage(profile, userId));
             } else {
-                dto.setImage(null); // 빈 파일이면 DB 컬럼 null
+                dto.setImage(null); // 빈 파일은 DB 컬럼을 null로 설정하기 위함 (기본값으로 변경)
             }
         }
 
         // 배경 이미지 처리
         if (background != null) {
+            backgroundUpdated = true; // 배경 파트가 요청에 포함되었음을 표시
             if (!background.isEmpty()) {
                 dto.setBackground(profileService.uploadBackgroundImage(background, userId));
             } else {
-                dto.setBackground(null); // 빈 파일이면 DB 컬럼 null
+                dto.setBackground(null); // 빈 파일은 DB 컬럼을 null로 설정하기 위함 (기본값으로 변경)
             }
         }
 
-        return ResponseEntity.ok(profileService.updateUserProfile(userId, dto));
+        // 서비스 호출 시 플래그를 함께 전달
+        return ResponseEntity.ok(profileService.updateUserProfile(userId, dto, profileUpdated, backgroundUpdated));
     }
 
 
